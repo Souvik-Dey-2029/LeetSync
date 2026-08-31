@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "LeetSync",
+  "description": "Automatically sync your LeetCode & GeeksforGeeks submissions to your own GitHub repository",
+  "version": "2.0.9",
+  "action": {
+    "default_icon": "assets/thumbnail.png",
+    "default_popup": "popup.html",
+    "default_title": "Sync your LeetCode solutions to your own GitHub repository"
+  },
+  "icons": {
+    "16": "assets/thumbnail.png",
+    "48": "assets/thumbnail.png",
+    "128": "assets/thumbnail.png"
+  },
+  "background": {
+    "scripts": [
+      "scripts/background.js"
+    ]
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "unlimitedStorage",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://api.github.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/*"
+      ],
+      "js": [
+        "scripts/leetcode.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://practice.geeksforgeeks.org/*"
+      ],
+      "js": [
+        "scripts/gfg.js"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "leetsync@local.dev",
+      "strict_min_version": "109.0"
+    }
+  }
+}

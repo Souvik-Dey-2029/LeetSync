@@ -1,3 +1,8 @@
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+var __webpack_exports__ = {};
+
+;// CONCATENATED MODULE: ./scripts/leetcode/util.js
 /** Enum for languages supported by LeetCode. */
 const languages = Object.freeze({
   C: '.c',
@@ -336,28 +341,286 @@ function matchesProblem(dirName, problemName, numericId, slug) {
   return false;
 }
 
-export {
-  addLeadingZeros,
-  assert,
-  checkElem,
-  convertToSlug,
-  debounce,
-  delay,
-  DIFFICULTY,
-  formatProblemFolderName,
-  formatStats,
-  getBrowser,
-  getDifficulty,
-  getDifficultyFolder,
-  getLangSlug,
-  getNewProblemPath,
-  getSolutionFilename,
-  isEmptyObject,
-  languageKeyFromExt,
-  languages,
-  LeetSyncError,
-  matchesProblem,
-  mergeStats,
-};
 
 
+
+
+;// CONCATENATED MODULE: ./scripts/githubDeviceAuth.js
+/**
+ * GitHub OAuth "Device Flow" client.
+ *
+ * This is the flow GitHub explicitly recommends for apps that cannot keep a
+ * client secret confidential (CLIs, desktop apps, and browser extensions).
+ * It only ever requires a public `client_id` — no client secret is
+ * transmitted or stored anywhere in this extension.
+ *
+ * Flow:
+ *  1. requestDeviceCode()  -> { device_code, user_code, verification_uri, interval }
+ *  2. Show `user_code` to the user and open `verification_uri` in a new tab.
+ *  3. pollForAccessToken() -> polls until the user approves/denies/expires.
+ *  4. fetchGitHubUser()    -> resolves the authenticated GitHub username.
+ *
+ * Docs: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow
+ */
+
+const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
+const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
+const GITHUB_USER_URL = 'https://api.github.com/user';
+const DEFAULT_SCOPE = 'repo';
+
+class DeviceAuthError extends Error {
+  constructor(code, message) {
+    super(message || code);
+    this.name = 'DeviceAuthError';
+    this.code = code;
+  }
+}
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Step 1: Ask GitHub for a device code + user code.
+ * @param {string} clientId - The installer's own OAuth App Client ID.
+ * @param {string} [scope] - Space-delimited OAuth scopes. Defaults to 'repo'.
+ */
+async function requestDeviceCode(clientId, scope = DEFAULT_SCOPE) {
+  if (!clientId) {
+    throw new DeviceAuthError('NO_CLIENT_ID', 'No GitHub OAuth Client ID has been configured.');
+  }
+
+  const res = await fetch(GITHUB_DEVICE_CODE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ client_id: clientId, scope }),
+  });
+
+  if (!res.ok) {
+    throw new DeviceAuthError('DEVICE_CODE_HTTP_ERROR', `GitHub returned HTTP ${res.status} while requesting a device code. Double check the Client ID.`);
+  }
+
+  const data = await res.json();
+  if (data.error) {
+    throw new DeviceAuthError(data.error, data.error_description || data.error);
+  }
+
+  return data; // { device_code, user_code, verification_uri, expires_in, interval }
+}
+
+/**
+ * Step 2: Poll GitHub until the user approves (or denies/expires) the request.
+ * Safe to abandon: pass an `abortSignal` object ({ cancelled: false }) and set
+ * `cancelled = true` from the caller to stop polling early.
+ *
+ * @param {string} clientId
+ * @param {string} deviceCode
+ * @param {number} intervalSeconds - Minimum polling interval GitHub asked for.
+ * @param {{cancelled: boolean}} [abortSignal]
+ * @param {() => void} [onTick] - Called before each poll attempt.
+ */
+async function pollForAccessToken(clientId, deviceCode, intervalSeconds, abortSignal = { cancelled: false }, onTick) {
+  let interval = intervalSeconds || 5;
+
+  while (!abortSignal.cancelled) {
+    await sleep(interval * 1000);
+    if (abortSignal.cancelled) return null;
+    if (onTick) onTick();
+
+    const res = await fetch(GITHUB_TOKEN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        device_code: deviceCode,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.access_token) {
+      return data; // { access_token, token_type, scope }
+    }
+
+    switch (data.error) {
+      case 'authorization_pending':
+        continue;
+      case 'slow_down':
+        interval = data.interval || interval + 5;
+        continue;
+      case 'expired_token':
+        throw new DeviceAuthError('EXPIRED', 'The login code expired before it was approved. Please try again.');
+      case 'access_denied':
+        throw new DeviceAuthError('DENIED', 'GitHub authorization was denied.');
+      default:
+        throw new DeviceAuthError(data.error || 'UNKNOWN', data.error_description || 'Unknown error while waiting for GitHub authorization.');
+    }
+  }
+
+  return null;
+}
+
+/** Step 3: Resolve the authenticated user's GitHub username using the new token. */
+async function fetchGitHubUser(token) {
+  const res = await fetch(GITHUB_USER_URL, {
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  });
+
+  if (!res.ok) {
+    throw new DeviceAuthError('USER_FETCH_FAILED', `Could not verify the GitHub account (HTTP ${res.status}).`);
+  }
+
+  return res.json();
+}
+
+
+
+;// CONCATENATED MODULE: ./scripts/options.js
+
+
+
+const api = getBrowser();
+
+const clientIdInput = document.getElementById('client_id');
+const saveClientIdBtn = document.getElementById('save_client_id');
+const clientIdStatus = document.getElementById('client_id_status');
+
+const notConnectedEl = document.getElementById('not_connected');
+const deviceFlowEl = document.getElementById('device_flow');
+const connectedEl = document.getElementById('connected');
+const connectBtn = document.getElementById('connect_btn');
+const cancelBtn = document.getElementById('cancel_btn');
+const disconnectBtn = document.getElementById('disconnect_btn');
+const userCodeEl = document.getElementById('user_code');
+const verificationLinkEl = document.getElementById('verification_link');
+const pollStatusEl = document.getElementById('poll_status');
+const connectedUsernameEl = document.getElementById('connected_username');
+const authErrorEl = document.getElementById('auth_error');
+
+let pollAbort = { cancelled: false };
+
+function showStatus(el, message) {
+  el.textContent = message;
+  el.hidden = !message;
+}
+
+function showAuthError(message) {
+  showStatus(authErrorEl, message);
+}
+
+function setView(view) {
+  notConnectedEl.hidden = view !== 'not_connected';
+  deviceFlowEl.hidden = view !== 'device_flow';
+  connectedEl.hidden = view !== 'connected';
+}
+
+async function loadClientId() {
+  const { leetsync_client_id } = await api.storage.local.get('leetsync_client_id');
+  if (leetsync_client_id) {
+    clientIdInput.value = leetsync_client_id;
+  }
+}
+
+async function loadConnectionState() {
+  const { leetsync_token, leetsync_username } = await api.storage.local.get([
+    'leetsync_token',
+    'leetsync_username',
+  ]);
+  if (leetsync_token && leetsync_username) {
+    connectedUsernameEl.textContent = leetsync_username;
+    setView('connected');
+  } else {
+    setView('not_connected');
+  }
+}
+
+saveClientIdBtn.addEventListener('click', async () => {
+  const value = clientIdInput.value.trim();
+  if (!value) {
+    showStatus(clientIdStatus, 'Please enter a Client ID first.');
+    return;
+  }
+  await api.storage.local.set({ leetsync_client_id: value });
+  showStatus(clientIdStatus, 'Saved.');
+  setTimeout(() => showStatus(clientIdStatus, ''), 2000);
+});
+
+connectBtn.addEventListener('click', async () => {
+  showAuthError('');
+  const { leetsync_client_id } = await api.storage.local.get('leetsync_client_id');
+
+  if (!leetsync_client_id) {
+    showAuthError('Save your GitHub OAuth App Client ID above before connecting.');
+    return;
+  }
+
+  try {
+    const device = await requestDeviceCode(leetsync_client_id);
+
+    userCodeEl.textContent = device.user_code;
+    verificationLinkEl.href = device.verification_uri;
+    verificationLinkEl.textContent = device.verification_uri;
+    showStatus(pollStatusEl, 'Waiting for you to approve on GitHub…');
+    setView('device_flow');
+
+    // Open GitHub's device activation page for convenience.
+    api.tabs.create({ url: device.verification_uri, active: true });
+
+    pollAbort = { cancelled: false };
+    const tokenData = await pollForAccessToken(
+      leetsync_client_id,
+      device.device_code,
+      device.interval,
+      pollAbort
+    );
+
+    if (!tokenData) {
+      // Cancelled by the user.
+      setView('not_connected');
+      return;
+    }
+
+    const user = await fetchGitHubUser(tokenData.access_token);
+
+    await api.storage.local.set({
+      leetsync_token: tokenData.access_token,
+      leetsync_username: user.login,
+    });
+
+    connectedUsernameEl.textContent = user.login;
+    setView('connected');
+  } catch (err) {
+    console.error(err);
+    showAuthError(err.message || 'Something went wrong while connecting to GitHub.');
+    setView('not_connected');
+  }
+});
+
+cancelBtn.addEventListener('click', () => {
+  pollAbort.cancelled = true;
+  setView('not_connected');
+});
+
+disconnectBtn.addEventListener('click', async () => {
+  await api.storage.local.set({
+    leetsync_token: null,
+    leetsync_username: null,
+    mode_type: 'hook',
+    leetsync_hook: null,
+  });
+  setView('not_connected');
+});
+
+loadClientId();
+loadConnectionState();
+
+/******/ })()
+;

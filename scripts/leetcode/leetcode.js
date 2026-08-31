@@ -5,13 +5,18 @@ import {
   debounce,
   delay,
   DIFFICULTY,
+  formatProblemFolderName,
   getBrowser,
   getDifficulty,
+  getNewProblemPath,
+  getSolutionFilename,
   isEmptyObject,
+  languageKeyFromExt,
   LeetSyncError,
   matchesProblem,
   mergeStats,
 } from './util.js';
+import { showSyncConfirmationModal, showExistingProblemModal } from './modal.js';
 import { appendProblemToReadme, sortTopicsInReadme } from './readmeTopics.js';
 
 /* Commit messages */
@@ -136,14 +141,14 @@ async function setPersistentStats(localStats) {
 
 const inFlightUploads = new Set();
 
-const isCompleted = async (problemName, numericId, slug) => {
+const findExistingProblemPath = async (problemName, numericId, slug) => {
   const data = await api.storage.local.get('stats');
   const stats = data?.stats;
 
   if (stats?.shas) {
-    for (const dirName of Object.keys(stats.shas)) {
-      if (matchesProblem(dirName, problemName, numericId, slug)) {
-        return true;
+    for (const dirPath of Object.keys(stats.shas)) {
+      if (matchesProblem(dirPath, problemName, numericId, slug)) {
+        return dirPath;
       }
     }
   }
@@ -155,67 +160,106 @@ const isCompleted = async (problemName, numericId, slug) => {
     ]);
 
     if (!token || !hook) {
-      return false;
+      return null;
     }
 
-    let remoteExists = false;
-    try {
-      const res = await getGitHubFile(token, hook, problemName);
-      if (res && res.ok) {
-        remoteExists = true;
-      }
-    } catch (e) {
-      // 404 means exact problemName folder does not exist
+    const folderName = formatProblemFolderName(numericId, slug, problemName);
+    const candidatesToTest = [];
+
+    ['Easy', 'Medium', 'Hard'].forEach(diff => {
+      candidatesToTest.push(`${diff}/${folderName}`);
+    });
+    candidatesToTest.push(folderName);
+
+    if (problemName && problemName !== folderName) {
+      ['Easy', 'Medium', 'Hard'].forEach(diff => {
+        candidatesToTest.push(`${diff}/${problemName}`);
+      });
+      candidatesToTest.push(problemName);
     }
 
-    if (!remoteExists && (numericId || slug)) {
-      const fallbackName = `${addLeadingZeros(String(numericId || ''))}-${slug || ''}`;
-      if (fallbackName !== problemName) {
-        try {
-          const res = await getGitHubFile(token, hook, fallbackName);
-          if (res && res.ok) {
-            remoteExists = true;
-          }
-        } catch (e) {}
-      }
-    }
-
-    if (!remoteExists) {
+    for (const candidatePath of candidatesToTest) {
       try {
-        const res = await getGitHubFile(token, hook, statsFilename);
+        const res = await getGitHubFile(token, hook, candidatePath);
         if (res && res.ok) {
-          const jsonRes = await res.json();
-          const pStats = JSON.parse(decode(jsonRes.content));
-          const remoteShas = pStats?.leetcode?.shas || {};
-          for (const dirName of Object.keys(remoteShas)) {
-            if (matchesProblem(dirName, problemName, numericId, slug)) {
-              remoteExists = true;
-              break;
+          return candidatePath;
+        }
+      } catch (e) {
+        // 404 means path does not exist
+      }
+    }
+
+    try {
+      const res = await getGitHubFile(token, hook, statsFilename);
+      if (res && res.ok) {
+        const jsonRes = await res.json();
+        const pStats = JSON.parse(decode(jsonRes.content));
+        const remoteShas = pStats?.leetcode?.shas || {};
+        for (const dirPath of Object.keys(remoteShas)) {
+          if (matchesProblem(dirPath, problemName, numericId, slug)) {
+            if (pStats?.leetcode) {
+              const mergedStats = mergeStats(pStats.leetcode, stats || {});
+              await api.storage.local.set({ stats: mergedStats });
             }
-          }
-          if (pStats?.leetcode) {
-            const mergedStats = mergeStats(pStats.leetcode, stats || {});
-            await api.storage.local.set({ stats: mergedStats });
+            return dirPath;
           }
         }
-      } catch (e) {}
-    }
-
-    if (remoteExists) {
-      const updatedStats = await getAndInitializeStats(problemName);
-      if (!updatedStats.shas[problemName]['README.md']) {
-        updatedStats.shas[problemName]['README.md'] = 'synced';
-        await api.storage.local.set({ stats: updatedStats });
       }
-      return true;
-    }
+    } catch (e) {}
   } catch (err) {
-    console.error('Remote duplicate check failed:', err);
+    console.error('Remote existing check failed:', err);
   }
 
+  return null;
+};
+
+const isCompleted = async (problemName, numericId, slug) => {
+  const existingPath = await findExistingProblemPath(problemName, numericId, slug);
+  if (existingPath) {
+    const updatedStats = await getAndInitializeStats(existingPath);
+    if (!updatedStats.shas[existingPath]['README.md']) {
+      updatedStats.shas[existingPath]['README.md'] = 'synced';
+      await api.storage.local.set({ stats: updatedStats });
+    }
+    return true;
+  }
   return false;
 };
 
+async function determineNextSolutionFilename(dirPath, language, action, statsShas, token, hook) {
+  if (action === 'replace') {
+    return getSolutionFilename(language, 1);
+  }
+
+  let existingFiles = new Set();
+
+  if (statsShas && statsShas[dirPath]) {
+    Object.keys(statsShas[dirPath]).forEach(f => existingFiles.add(f));
+  }
+
+  if (token && hook) {
+    try {
+      const res = await getGitHubFile(token, hook, dirPath);
+      if (res && res.ok) {
+        const items = await res.json();
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            if (item.name) existingFiles.add(item.name);
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  let approachNum = 1;
+  while (true) {
+    const candidate = getSolutionFilename(language, approachNum);
+    if (!existingFiles.has(candidate)) {
+      return candidate;
+    }
+    approachNum++;
+  }
+}
 
 /* Discussion posts prepended at top of README */
 /* Future implementations may require appending to bottom of file */
@@ -246,22 +290,6 @@ const updateReadmeWithDiscussionPost = async (
     );
 };
 
-/**
- * Wrapper func to upload code to a specific GitHub repository and handle 409 errors (conflict)
- * @async
- * @function uploadGitWith409Retry
- * @param {string} code - The code content that needs to be uploaded.
- * @param {string} problemName - The name of the problem or file where the code is related to.
- * @param {string} filename - The target filename in the repository where the code will be stored.
- * @param {string} commitMsg - The commit message that describes the changes being made.
- * @param {Object} [optionals] - Optional parameters for updating stats
- * @param {string} optionals.sha - The SHA value of the existing content to be updated (optional).
- * @param {DIFFICULTY} optionals.difficulty - The difficulty level of the problem (optional).
- *
- * @returns {Promise<string>} A promise that resolves with the new SHA of the content after successful upload.
- *
- * @throws {LeetSyncError} If there's no token defined, the mode type is not `commit`, or if no repository hook is defined.
- */
 async function uploadGitWith409Retry(code, problemName, filename, commitMsg, optionals) {
   let token;
   let hook;
@@ -323,16 +351,6 @@ async function uploadGitWith409Retry(code, problemName, filename, commitMsg, opt
   }
 }
 
-/** Returns GitHub data for the file specified by `${directory}/${filename}` path
- * @async
- * @function getGitHubFile
- * @param {string} token - The personal access token for authentication with GitHub.
- * @param {string} hook - The owner and repository name in the format "owner/repository".
- * @param {string} directory - The directory within the repository where the file is located.
- * @param {string} filename - The name of the file to be fetched.
- * @returns {Promise<Response>} A promise that resolves with the response from the GitHub API request.
- * @throws {Error} Throws an error if the response is not OK (e.g., HTTP status code is not 200-299).
- */
 async function getGitHubFile(token, hook, directory, filename) {
   const path = getPath(directory, filename);
   const URL = `https://api.github.com/repos/${hook}/contents/${path}`;
@@ -359,8 +377,6 @@ if (typeof document !== 'undefined') {
     const element = event.target;
     const oldPath = window.location.pathname;
 
-    /* Act on Post button click */
-    /* Complex since "New" button shares many of the same properties as "Post button */
     if (
       element &&
       (element.classList.contains('icon__3Su4') ||
@@ -369,7 +385,6 @@ if (typeof document !== 'undefined') {
         element.parentElement?.classList.contains('header-right__2UzF'))
     ) {
       setTimeout(function () {
-        /* Only post if post button was clicked and url changed */
         if (
           oldPath !== window.location.pathname &&
           oldPath === window.location.pathname.substring(0, oldPath.length) &&
@@ -378,7 +393,7 @@ if (typeof document !== 'undefined') {
           const date = new Date();
           const currentDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()} at ${date.getHours()}:${date.getMinutes()}`;
           const addition = `[Discussion Post (created on ${currentDate})](${window.location})  \n`;
-          const problemName = window.location.pathname.split('/')[2]; // must be true.
+          const problemName = window.location.pathname.split('/')[2];
           updateReadmeWithDiscussionPost(addition, problemName, readmeFilename, discussionMsg, true);
         }
       }, 1000);
@@ -469,15 +484,7 @@ function loader(leetCode) {
       const problemName = leetCode.getProblemNameSlug();
       const numericId = leetCode.getProblemId ? leetCode.getProblemId() : null;
       const titleSlug = leetCode.getProblemSlug ? leetCode.getProblemSlug() : null;
-
-      const alreadyCompleted = await isCompleted(problemName, numericId, titleSlug);
-      if (alreadyCompleted) {
-        console.log(`LeetSync: Problem ${problemName} is already synchronized.`);
-        leetCode.markAlreadySynced(
-          'Already synced — this LeetCode problem is already in your GitHub repository.'
-        );
-        return;
-      }
+      const difficulty = leetCode.parseDifficulty ? leetCode.parseDifficulty() : leetCode.difficulty;
 
       if (inFlightUploads.has(problemName)) {
         console.log(`LeetSync: Upload for ${problemName} is already in flight.`);
@@ -490,20 +497,48 @@ function loader(leetCode) {
       inFlightUploads.add(problemName);
 
       try {
-        const language = leetCode.getLanguageExtension();
-        if (!language) {
+        const { leetsync_token: token, leetsync_hook: hook, stats } = await api.storage.local.get([
+          'leetsync_token',
+          'leetsync_hook',
+          'stats',
+        ]);
+
+        const langExt = leetCode.getLanguageExtension();
+        if (!langExt) {
           throw new LeetSyncError('LanguageNotFound');
         }
-        const filename = problemName + language;
+
+        const langVerbose = leetCode.submissionData?.lang?.verboseName || languageKeyFromExt(langExt);
+
+        const existingPath = await findExistingProblemPath(problemName, numericId, titleSlug);
+
+        let targetDirPath;
+        let filename;
+
+        if (existingPath) {
+          targetDirPath = existingPath;
+          const userAction = await showExistingProblemModal();
+          filename = await determineNextSolutionFilename(
+            targetDirPath,
+            langVerbose,
+            userAction,
+            stats?.shas,
+            token,
+            hook
+          );
+        } else {
+          targetDirPath = getNewProblemPath(difficulty, numericId, titleSlug, problemName);
+          filename = getSolutionFilename(langVerbose, 1);
+        }
 
         /* Upload README */
         const uploadReadMe = await api.storage.local.get('stats').then(({ stats }) => {
-          const shaExists = stats?.shas?.[problemName]?.[readmeFilename] !== undefined;
+          const shaExists = stats?.shas?.[targetDirPath]?.[readmeFilename] !== undefined;
 
           if (!shaExists) {
             return uploadGitWith409Retry(
               encode(probStatement),
-              problemName,
+              targetDirPath,
               readmeFilename,
               readmeMsg
             );
@@ -514,12 +549,12 @@ function loader(leetCode) {
         const notes = leetCode.getNotesIfAny();
         let uploadNotes;
         if (notes != undefined && notes.length > 0) {
-          uploadNotes = uploadGitWith409Retry(encode(notes), problemName, 'NOTES.md', createNotesMsg);
+          uploadNotes = uploadGitWith409Retry(encode(notes), targetDirPath, 'NOTES.md', createNotesMsg);
         }
 
         /* Upload code to Git */
         const code = leetCode.findCode(probStats);
-        const uploadCode = uploadGitWith409Retry(encode(code), problemName, filename, probStats);
+        const uploadCode = uploadGitWith409Retry(encode(code), targetDirPath, filename, probStats);
 
         /* Group problem into its relevant topics */
         const updateRepoReadMe = updateReadmeTopicTagsWithProblem(
@@ -532,7 +567,7 @@ function loader(leetCode) {
         leetCode.markUploaded();
 
         // Increments local and persistent stats
-        await incrementStats(leetCode.difficulty, problemName).then(setPersistentStats);
+        await incrementStats(difficulty || leetCode.difficulty, targetDirPath).then(setPersistentStats);
       } finally {
         inFlightUploads.delete(problemName);
       }
@@ -557,7 +592,6 @@ function wasSubmittedByKeyboard(event) {
   const isEnterKey = event.key === 'Enter';
   const isMacOS = window.navigator.userAgent.includes('Mac');
 
-  // Adapt to MacOS operating system
   return isEnterKey && ((isMacOS && event.metaKey) || (!isMacOS && event.ctrlKey));
 }
 
@@ -593,7 +627,11 @@ async function v2SubmissionHandler(event, leetCode) {
     throw new LeetSyncError('UserNotAuthenticated');
   }
 
-  // is click or is ctrl enter
+  const shouldSync = await showSyncConfirmationModal();
+  if (!shouldSync) {
+    return false;
+  }
+
   const submissionId = await listenForSubmissionId();
   leetCode.submissionId = submissionId;
   loader(leetCode);
@@ -618,7 +656,12 @@ const submitBtnObserver =
           observer.disconnect();
 
           const leetCode = new LeetCodeV1();
-          v1SubmitBtn.addEventListener('click', () => loader(leetCode));
+          v1SubmitBtn.addEventListener('click', async () => {
+            const shouldSync = await showSyncConfirmationModal();
+            if (shouldSync) {
+              loader(leetCode);
+            }
+          });
           return;
         }
 
@@ -633,6 +676,7 @@ const submitBtnObserver =
         }
       })
     : null;
+
 
 if (typeof document !== 'undefined' && document.body && submitBtnObserver) {
   submitBtnObserver.observe(document.body, {

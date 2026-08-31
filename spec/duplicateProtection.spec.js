@@ -132,7 +132,10 @@ describe('Duplicate Problem Protection', () => {
       expect(result).toBeTrue();
 
       // Local storage should also be updated/restored
-      expect(storageState.stats?.shas?.['0001-two-sum']).toBeDefined();
+      const hasRestoredStats = Boolean(
+        storageState.stats?.shas?.['Easy/0001-two-sum'] || storageState.stats?.shas?.['0001-two-sum']
+      );
+      expect(hasRestoredStats).toBeTrue();
     });
 
     it('Different problems -> each uploads normally (returns false for new problem)', async () => {

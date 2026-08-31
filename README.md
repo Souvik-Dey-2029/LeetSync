@@ -6,66 +6,244 @@
   <br>
 </h1>
 
+<h1 align="center">
+  <br>
+  <strong>LeetSync</strong>
+  <br>
+  <em>Autonomous, privacy-focused LeetCode → GitHub synchronization tool</em>
+  <br>
+  <br>
+</h1>
+
 <p align="center">
   <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"/>
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"/>
   </a>
+  <img src="https://img.shields.io/badge/version-2.0.9-orange.svg" alt="Version 2.0.9"/>
+  <img src="https://img.shields.io/badge/manifest-V3-green.svg" alt="Manifest V3"/>
 </p>
 
-## What is LeetSync?
-<p>A Chrome (Manifest V3) extension that automatically pushes your code to <strong>your own</strong> GitHub repository when you pass all tests on a <a href="https://leetcode.com/">LeetCode</a> problem. LeetSync is a privacy-focused fork/rebuild of the open-source <a href="https://github.com/arunbhardwaj/LeetHub-2.0">LeetHub 2.0</a> project: every installation authenticates its own GitHub account via GitHub's OAuth Device Flow, using an OAuth App the installer creates and controls themselves. There is no shared developer account, no bundled client secret, and no backend server operated by the extension author.</p>
+---
 
-## Why LeetSync?
-<p> <strong>1.</strong> Recruiters <em>want</em> to see your contributions to the open-source community, be it through side projects, solving algorithms/data-structures, or contributing to existing projects.<br>
-GitHub is developers' #1 portfolio. LeetSync makes it effortless (autonomous) to keep track of progress on the largest network of engineers, GitHub.</p>
+## Overview
 
-<p> <strong>2.</strong> There's no easy way of accessing your LeetCode problems in one place! <br>
-Pushing code manually to GitHub from LeetCode is time consuming — LeetSync automates it entirely.</p>
+**LeetSync** is a local-first Chrome and Firefox browser extension (Manifest V3) that automatically synchronizes your accepted [LeetCode](https://leetcode.com/) submissions directly to your own GitHub repository.
 
-## How does LeetSync work?
+Building a visible history of data structures & algorithms problem-solving on GitHub is one of the most effective ways for software engineers to demonstrate consistent practice to recruiters and open-source collaborators. However, manually copying solution code, creating organized directory structures, and writing markdown problem descriptions is tedious.
 
-<p>It's as simple as:</p>
-<ol>
-  <li>Install the extension, then create your own GitHub OAuth App (see "GitHub authentication setup" below) and enter its Client ID on the LeetSync settings page.</li>
-  <li>Click "Connect GitHub Account" and approve access on GitHub's device activation page.</li>
-  <li>Set up an existing/new repository with LeetSync (private by default) by clicking "Get Started".</li>
-  <li>Begin LeetCoding! To view your progress, simply click on the extension icon.</li>
-</ol>
-
-## GitHub authentication setup (do this once per installation)
-
-LeetSync has no server of its own, so each person who installs it authenticates with their *own* GitHub OAuth App:
-
-1. Go to [github.com/settings/developers](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App**.
-2. Fill in any Application name / Homepage URL.
-3. Set **Authorization callback URL** to `https://github.com/` (required by GitHub's form, unused by the device flow).
-4. After creating the app, open **Enable Device Flow** and turn it on.
-5. Copy the **Client ID** and paste it into the extension's settings page (right-click the extension icon → Options, or the gear icon in the popup).
-6. Click **Connect GitHub Account** and approve the request on GitHub.
-
-No client secret is ever needed, generated, or stored by this extension.
-
-## Attribution & License
-
-LeetSync began as a fork of [LeetHub 2.0](https://github.com/arunbhardwaj/LeetHub-2.0) by Arun Bhardwaj, used and modified here under the terms of its [MIT License](./LICENSE). The original project's GitHub OAuth application, client credentials, and account-specific configuration have been removed and replaced with a per-installation authentication flow described above.
-
-# How to set up LeetSync for local development?
-
-  1. Clone this repo to your local machine
-  2. Run `npm run setup` to install the developer dependencies
-  3. Run `npm run build` to build the final extension files into the `./dist/` directory
-  4. Go to <a href="chrome://extensions">chrome://extensions</a> or <a href="https://firefox-source-docs.mozilla.org/devtools-user/about_colon_debugging/index.html#extensions">about:debugging</a> in Firefox
-     - In Chrome, enable [Developer mode](https://support.google.com/chrome/a/answer/2714278) by toggling the switch on the top right corner
-  5. Click `Load unpacked` or `Load Temporary Add-on...`
-  6. Select the `./dist/chrome` or `./dist/firefox` folder
-  7. That's it! Be sure to `npm run build` and reload the extension after making changes
-
-Other npm commands available:
+LeetSync automates the entire process seamlessly without relying on third-party backend servers, remote databases, or shared OAuth applications.
 
 ```
-npm run               Show list of commands available
-npm run format        Auto-format JavaScript, HTML/CSS
-npm run format-test   Test all code is formatted properly
-npm run lint          Lint JavaScript
-npm run lint-test     Test all code is linted properly
+       LeetCode Submission (Accepted)
+                     │
+                     ▼
+         Interactive Sync Modal
+        [ Yes, Sync ] [ Don't Sync ]
+                     │
+                     ▼
+                 LeetSync
+        (Chrome Extension Engine)
+                     │
+                     ▼
+      Language & Difficulty Hierarchy
+         Your GitHub Repository
 ```
+
+---
+
+## Key Features
+
+### ✅ Implemented & Verified
+
+- **Privacy-First Architecture**: 100% client-side operation with zero LeetSync backend servers or databases. All OAuth tokens and user preferences remain stored inside your browser's `chrome.storage.local`.
+- **GitHub OAuth Device Flow**: Secure authentication via GitHub's official RFC 8628 Device Flow. Users supply their own public OAuth Client ID—no client secrets are ever transmitted or stored.
+- **Repository Setup & Linking**: Create a new private GitHub repository directly from the extension dashboard or link an existing repository.
+- **Interactive Submission Confirmation**: Prompts you upon an accepted LeetCode submission (`Sync this submission to GitHub?`) so you retain complete control over what gets committed.
+- **Language-Based Repository Hierarchy**: Automatically organizes solutions by programming language and difficulty level:
+  ```
+  <Language>/<Difficulty>/<NumericId-ProblemSlug>/
+  ```
+- **Multiple Solution Support**: When submitting multiple approaches for the same problem in the same language, LeetSync offers an interactive choice to **Add Another Solution** (saving as `problem-2.ext`, `problem-3.ext`) or **Replace Existing Solution**.
+- **Automatic README Generation**: Creates detailed `README.md` files inside each problem folder featuring problem title, difficulty tag, formatted description HTML converted to markdown, and topic metadata.
+- **Duplicate & Race Condition Protection**: Performs remote GitHub API checks to prevent redundant uploads and includes an in-flight upload guard to protect against rapid duplicate submissions.
+- **Dashboard & Solved Statistics**: Real-time developer dashboard (`welcome.html`) tracking Total, Easy, Medium, and Hard solved counts with repository status management.
+- **Cross-Browser Support**: Manifest V3 compliant bundle generation for both Chrome and Firefox browsers.
+
+---
+
+## Repository Folder Structure
+
+LeetSync organizes your solutions in a clean, language-first directory structure at the root of your connected GitHub repository:
+
+```
+├── Java/
+│   └── Easy/
+│       └── 0001-two-sum/
+│           ├── README.md
+│           ├── two-sum.java
+│           └── two-sum-2.java
+├── Python3/
+│   └── Medium/
+│       └── 0003-longest-substring-without-repeating-characters/
+│           ├── README.md
+│           └── longest-substring-without-repeating-characters.py
+├── C++/
+│   └── Hard/
+│       └── 0004-median-of-two-sorted-arrays/
+│           ├── README.md
+│           └── median-of-two-sorted-arrays.cpp
+├── stats.json
+└── README.md
+```
+
+---
+
+## GitHub Authentication Setup
+
+LeetSync does not use a central developer server or shared OAuth client secret. Each user configures their own GitHub OAuth Application Client ID once during installation.
+
+### Step-by-Step Setup:
+
+1. Navigate to your GitHub account settings: [github.com/settings/developers](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App**.
+2. Register a new application with any name (e.g., `My LeetSync Extension`).
+3. Set **Homepage URL** and **Authorization callback URL** to `https://github.com/` (required by GitHub's form, though unused by the Device Flow).
+4. After saving, click **Enable Device Flow** under your OAuth App settings and turn it on.
+5. Copy the generated **Client ID** (public identifier).
+6. Right-click the LeetSync extension icon → **Options** (or click **Settings ⚙** in the popup/dashboard), paste your Client ID, and click **Save**.
+7. Click **Connect GitHub Account**, copy the 8-character user code displayed by LeetSync, and approve the activation prompt on GitHub.
+
+> **Note**: Device Flow authentication only uses a public Client ID. No Client Secret is required or stored.
+
+---
+
+## Installation from Source
+
+### Prerequisites
+
+- **Node.js**: v18.x or higher
+- **npm**: v9.x or higher
+
+### Build Instructions
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Souvik-Dey-2029/LeetSync.git
+   cd LeetSync
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm run setup
+   ```
+
+3. Build production extension bundles:
+   ```bash
+   npm run build
+   ```
+   This generates ready-to-load extension bundles in `dist/chrome` and `dist/firefox`.
+
+4. Load into Chrome:
+   - Open Chrome and navigate to `chrome://extensions`.
+   - Enable **Developer mode** using the toggle in the top-right corner.
+   - Click **Load unpacked**.
+   - Select the `./dist/chrome` directory.
+
+---
+
+## Development & Testing
+
+### Available npm Scripts
+
+| Script | Command | Description |
+| :--- | :--- | :--- |
+| `npm run build` | `webpack --mode=production` | Compiles extension bundles into `dist/chrome` and `dist/firefox`. |
+| `npm run dev` | `webpack --mode=production --watch` | Recompiles automatically on source changes. |
+| `npm test` | `jasmine` | Executes the unit test suite (29 specs). |
+| `npm run format` | `prettier --write **/*.{js,css,html}` | Auto-formats codebase files. |
+| `npm run lint` | `eslint **/*.{js,ts} --fix` | Runs ESLint analysis and fixes code style issues. |
+
+### Running Tests
+
+LeetSync uses [Jasmine](https://jasmine.github.io/) as its official test runner. To execute the automated unit test suite:
+
+```bash
+npm test
+```
+
+*All 29 unit test specs cover submission sync modal logic, duplicate problem protection remote API checks, README topic tag parsing, and path utility functions.*
+
+---
+
+## Project Architecture
+
+```
+LeetSync/
+├── manifest-chrome.json     # Chrome Manifest V3 configuration
+├── manifest-firefox.json    # Firefox Manifest V3 configuration
+├── webpack.config.js        # Build configuration & asset pipeline
+├── options.html             # Options page for GitHub Client ID & Auth
+├── popup.html               # Extension popup interface
+├── welcome.html             # Developer dashboard UI
+├── css/
+│   └── welcome.css          # Design system & 3D visual workspace styles
+├── scripts/
+│   ├── background.js        # Extension background service worker
+│   ├── githubDeviceAuth.js  # OAuth Device Flow authorization client
+│   ├── options.js           # Options page event handlers
+│   ├── popup.js             # Extension popup controller
+│   ├── welcome.js           # Dashboard controller & interactive stats
+│   └── leetcode/
+│       ├── leetcode.js      # Core synchronization engine & GitHub API client
+│       ├── modal.js         # Confirmation & solution choice modal DOM handlers
+│       ├── readmeTopics.js  # Problem description & topic markdown parser
+│       ├── submitBtn.js     # LeetCode DOM submit listener
+│       ├── util.js          # Path formatting & extension helper utilities
+│       └── versions.js      # LeetCode UI V1 / V2 DOM & GraphQL adapters
+└── spec/                    # Automated Jasmine unit testing framework
+```
+
+---
+
+## Roadmap
+
+### ⏳ Planned Features
+
+- **Automated PDF Export**: Option to generate and upload PDF versions of problem descriptions alongside code solutions.
+- **Historical Submission Batch Sync**: Bulk synchronization of past accepted submissions from LeetCode submission history.
+- **Enhanced GFG/HackerRank Integrations**: Expanding the multi-platform sync engine.
+
+---
+
+## Limitations
+
+- **DOM Dependency**: LeetSync relies on LeetCode's active web DOM and GraphQL endpoint structures. Significant changes to LeetCode's frontend may require extension updates.
+- **GitHub API Rate Limits**: Unauthenticated or excessively frequent API requests are subject to standard GitHub REST API rate limits (5,000 requests/hour for authenticated user tokens).
+
+---
+
+## Privacy & Security
+
+- **Local Storage**: All authentication tokens (`leetsync_token`) and user settings are stored strictly in your browser's private extension storage (`chrome.storage.local`).
+- **Direct API Communication**: LeetSync communicates directly with `api.github.com` and `leetcode.com`. No intermediate proxy servers touch your code or credentials.
+- **No Client Secrets**: Built using GitHub OAuth Device Flow, eliminating the need to hardcode or store sensitive application client secrets.
+
+---
+
+## Disclaimer
+
+LeetSync is an independent open-source project and is not affiliated with, maintained, authorized, endorsed, or sponsored by LeetCode or GitHub.
+
+---
+
+## License & Attribution
+
+LeetSync is released under the [MIT License](./LICENSE).
+
+This project originated as a fork/rebuild of [LeetHub 2.0](https://github.com/arunbhardwaj/LeetHub-2.0) by Arun Bhardwaj. All original MIT licensing and copyright requirements have been preserved.
+
+---
+
+## Author
+
+**Souvik Dey**  
+- GitHub: [@Souvik-Dey-2029](https://github.com/Souvik-Dey-2029)

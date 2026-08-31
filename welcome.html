@@ -9,18 +9,57 @@
   </head>
 
   <body>
+    <!-- SIDE DECORATIVE DEVELOPER MOTIFS -->
+    <div class="side-decorations left-decorations">
+      <div class="floating-motif motif-bracket" data-parallax="-0.04">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+      </div>
+      <div class="floating-motif motif-cube" data-parallax="-0.06">
+        <div class="css-cube">
+          <div class="cube-face cube-front"></div>
+          <div class="cube-face cube-top"></div>
+          <div class="cube-face cube-side"></div>
+        </div>
+      </div>
+      <div class="floating-motif motif-code" data-parallax="-0.03">
+        <span>{ }</span>
+      </div>
+    </div>
+
+    <div class="side-decorations right-decorations">
+      <div class="floating-motif motif-github" data-parallax="0.04">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+        </svg>
+      </div>
+      <div class="floating-motif motif-cube-small" data-parallax="0.07">
+        <div class="css-cube cube-sm">
+          <div class="cube-face cube-front"></div>
+          <div class="cube-face cube-top"></div>
+          <div class="cube-face cube-side"></div>
+        </div>
+      </div>
+      <div class="floating-motif motif-binary" data-parallax="0.03">
+        <span>01</span>
+      </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTAINER -->
     <div class="app-container">
       <!-- HEADER -->
       <header class="app-header">
-        <div class="brand">
-          <div class="logo-icon">
+        <div class="brand-container" id="brand_logo_card">
+          <div class="logo-icon-3d">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#FF6C0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="#FF6C0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="#FF6C0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#FF7A00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="#FF7A00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <span class="brand-text">Leet<span class="accent">Sync</span></span>
+          <span class="brand-text">Leet<span class="accent-orange">Sync</span></span>
         </div>
 
         <div class="header-actions">
@@ -28,43 +67,43 @@
             <span class="status-dot"></span>
             <span id="status_text_header">GitHub Connected</span>
           </div>
-          <a id="settings_link" class="btn-ghost" href="#">
+          <a id="settings_link" class="btn-settings" href="#">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"></circle>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
-            Settings
+            <span>Settings</span>
           </a>
         </div>
       </header>
 
-      <!-- NOTIFICATIONS -->
+      <!-- NOTIFICATION MESSAGES -->
       <div id="error" class="alert alert-error" style="display:none;"></div>
       <div id="success" class="alert alert-success" style="display:none;"></div>
 
       <!-- HERO SECTION -->
       <section class="hero-section">
         <div class="hero-content">
-          <span class="hero-badge">DEVELOPER WORKFLOW</span>
-          <h1 class="hero-title">Automated LeetCode to GitHub Sync</h1>
+          <span class="hero-tag">LEETSYNC WORKFLOW</span>
+          <h1 class="hero-title">Automated LeetCode <span class="arrow">→</span> GitHub Workflow</h1>
           <p class="hero-desc">
-            Automatically synchronize your accepted LeetCode submissions directly to your personal GitHub repository, organized cleanly by programming language and difficulty.
+            Keep every accepted solution organized in your own GitHub repository.
           </p>
         </div>
       </section>
 
-      <!-- SETUP HOOK MODE (Shown when repo hook is not configured) -->
+      <!-- REPOSITORY SETUP FORM (Displayed when hook_mode is active) -->
       <section id="hook_mode" class="card setup-card" style="display: none;">
-        <div class="card-header">
-          <div class="icon-bubble orange">
+        <div class="card-header-row">
+          <div class="icon-box orange">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
             </svg>
           </div>
           <div>
-            <h2>Set Up Repository Hook</h2>
-            <p>Choose an option below to create or link your target GitHub repository.</p>
+            <h2 class="card-title">Set Up Repository Hook</h2>
+            <p class="card-subtitle">Connect or create a dedicated repository to store your LeetCode solutions.</p>
           </div>
         </div>
 
@@ -85,7 +124,7 @@
         </div>
 
         <div class="form-actions">
-          <button id="hook_button" disabled class="btn-primary">
+          <button id="hook_button" disabled class="btn-orange">
             <span>Get Started</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -95,142 +134,146 @@
         </div>
       </section>
 
-      <!-- MAIN DASHBOARD CONTENT (Shown when repo is configured) -->
+      <!-- MAIN DASHBOARD CONTENT (Displayed when commit_mode is active) -->
       <div id="commit_mode" style="display: none;">
-        <!-- STATS GRID -->
+        <!-- STATISTICS SECTION -->
         <section class="stats-grid">
-          <div class="stat-card total">
-            <div class="stat-header">
-              <div class="stat-icon-wrapper total-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="stat-card card-3d">
+            <div class="stat-top">
+              <span class="stat-label">TOTAL</span>
+              <div class="stat-icon-bg total-bg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                 </svg>
               </div>
-              <span class="stat-tag">TOTAL</span>
             </div>
-            <div class="stat-body">
-              <span class="stat-value" id="p_solved">0</span>
-              <span class="stat-label">Problems Solved</span>
+            <div class="stat-value-box">
+              <span class="stat-number total-num" id="p_solved">0</span>
+              <span class="stat-subtitle">Problems Solved</span>
             </div>
           </div>
 
-          <div class="stat-card easy">
-            <div class="stat-header">
-              <div class="stat-icon-wrapper easy-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="stat-card card-3d">
+            <div class="stat-top">
+              <span class="stat-label label-easy">EASY</span>
+              <div class="stat-icon-bg easy-bg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
               </div>
-              <span class="stat-tag easy-tag">EASY</span>
             </div>
-            <div class="stat-body">
-              <span class="stat-value easy-value" id="p_solved_easy">0</span>
-              <span class="stat-label">Easy Solved</span>
+            <div class="stat-value-box">
+              <span class="stat-number easy-num" id="p_solved_easy">0</span>
+              <span class="stat-subtitle">Easy Solved</span>
             </div>
           </div>
 
-          <div class="stat-card medium">
-            <div class="stat-header">
-              <div class="stat-icon-wrapper medium-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="stat-card card-3d">
+            <div class="stat-top">
+              <span class="stat-label label-medium">MEDIUM</span>
+              <div class="stat-icon-bg medium-bg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"></circle>
                   <line x1="12" y1="8" x2="12" y2="12"></line>
                   <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
               </div>
-              <span class="stat-tag medium-tag">MEDIUM</span>
             </div>
-            <div class="stat-body">
-              <span class="stat-value medium-value" id="p_solved_medium">0</span>
-              <span class="stat-label">Medium Solved</span>
+            <div class="stat-value-box">
+              <span class="stat-number medium-num" id="p_solved_medium">0</span>
+              <span class="stat-subtitle">Medium Solved</span>
             </div>
           </div>
 
-          <div class="stat-card hard">
-            <div class="stat-header">
-              <div class="stat-icon-wrapper hard-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="stat-card card-3d">
+            <div class="stat-top">
+              <span class="stat-label label-hard">HARD</span>
+              <div class="stat-icon-bg hard-bg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
               </div>
-              <span class="stat-tag hard-tag">HARD</span>
             </div>
-            <div class="stat-body">
-              <span class="stat-value hard-value" id="p_solved_hard">0</span>
-              <span class="stat-label">Hard Solved</span>
+            <div class="stat-value-box">
+              <span class="stat-number hard-num" id="p_solved_hard">0</span>
+              <span class="stat-subtitle">Hard Solved</span>
             </div>
           </div>
         </section>
 
-        <!-- CONNECTION REPOSITORY CARD -->
-        <section class="card connection-card">
-          <div class="connection-header">
-            <div class="repo-details">
-              <div class="github-avatar-box">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <!-- REPOSITORY CARD -->
+        <section class="card repo-card card-3d" id="repo_card_container">
+          <div class="repo-card-inner">
+            <div class="repo-main">
+              <div class="github-badge-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                   <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
                 </svg>
               </div>
               <div>
-                <span class="meta-label">CONNECTED GITHUB REPOSITORY</span>
-                <h3 id="display_repo_name" class="repo-title">Loading repository details...</h3>
+                <div class="repo-meta-row">
+                  <span class="meta-tag">CONNECTED REPOSITORY</span>
+                  <span class="connected-pill">● CONNECTED</span>
+                </div>
+                <h3 id="display_repo_name" class="repo-title-text">Loading repository...</h3>
               </div>
             </div>
-            <div class="actions-group">
-              <a id="open_repo_btn" href="#" target="_blank" class="btn-secondary">
+
+            <div class="repo-actions">
+              <a id="open_repo_btn" href="#" target="_blank" class="btn-outline">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                   <polyline points="15 3 21 3 21 9"></polyline>
                   <line x1="10" y1="14" x2="21" y2="3"></line>
                 </svg>
-                Open Repository
+                <span>Open Repository</span>
               </a>
-              <span id="unlink" class="unlink-wrapper">
-                <a class="btn-danger-ghost">Unlink Repo</a>
+              <span id="unlink" class="unlink-holder">
+                <a class="btn-danger">Unlink Repo</a>
               </span>
             </div>
           </div>
         </section>
       </div>
 
-      <!-- FEATURES & CAPABILITIES -->
+      <!-- FEATURES / CAPABILITIES SECTION -->
       <section class="features-section">
-        <h2 class="section-title">Core Capabilities</h2>
+        <h2 class="section-heading">Capabilities</h2>
         <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon orange">
+          <div class="feature-card card-3d">
+            <div class="feature-icon icon-orange">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
               </svg>
             </div>
             <h3>Automatic Sync</h3>
-            <p>Accepted submissions are synchronized directly to your connected repository after interactive confirmation.</p>
+            <p>Accepted submissions are synchronized directly to your connected GitHub repository.</p>
           </div>
 
-          <div class="feature-card">
-            <div class="feature-icon blue">
+          <div class="feature-card card-3d">
+            <div class="feature-icon icon-dark">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </div>
             <h3>Multiple Solutions</h3>
-            <p>Store alternative approaches for the same problem using deterministic approach numbering (<code>solution-2.java</code>).</p>
+            <p>Save alternative approaches for the same problem using approach numbering (<code>solution-2.java</code>).</p>
           </div>
 
-          <div class="feature-card">
-            <div class="feature-icon green">
+          <div class="feature-card card-3d">
+            <div class="feature-icon icon-green">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
               </svg>
             </div>
             <h3>Language Hierarchy</h3>
-            <p>Code is stored in language-specific namespaces (e.g. <code>Java/</code>, <code>Python/</code>, <code>C++/</code>) to prevent collisions.</p>
+            <p>Code is isolated by language namespaces (e.g. <code>Java/</code>, <code>Python/</code>, <code>C++/</code>).</p>
           </div>
 
-          <div class="feature-card">
-            <div class="feature-icon purple">
+          <div class="feature-card card-3d">
+            <div class="feature-icon icon-purple">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
@@ -239,11 +282,11 @@
               </svg>
             </div>
             <h3>Difficulty Folders</h3>
-            <p>Problems are categorized inside Easy, Medium, and Hard directories for structured tracking.</p>
+            <p>Problems are grouped into Easy, Medium, and Hard subfolders for organized tracking.</p>
           </div>
 
-          <div class="feature-card">
-            <div class="feature-icon teal">
+          <div class="feature-card card-3d">
+            <div class="feature-icon icon-teal">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
@@ -252,11 +295,11 @@
               </svg>
             </div>
             <h3>README Generation</h3>
-            <p>Automatically generates markdown documentation containing problem descriptions and topic metadata.</p>
+            <p>Generates markdown documentation with problem descriptions and topic metadata.</p>
           </div>
 
-          <div class="feature-card">
-            <div class="feature-icon amber">
+          <div class="feature-card card-3d">
+            <div class="feature-icon icon-amber">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
@@ -269,10 +312,10 @@
 
       <!-- FOOTER -->
       <footer class="app-footer">
-        <div class="footer-content">
-          <span class="footer-brand">Leet<span class="accent">Sync</span> v<span id="ext_version">2.0.9</span></span>
-          <span class="footer-divider">•</span>
-          <span class="footer-tagline">Built for consistent LeetCode practice.</span>
+        <div class="footer-inner">
+          <span class="footer-brand">Leet<span class="accent-orange">Sync</span> v<span id="ext_version">2.0.9</span></span>
+          <span class="footer-dot">•</span>
+          <span class="footer-desc">Built for consistent LeetCode practice.</span>
         </div>
       </footer>
     </div>

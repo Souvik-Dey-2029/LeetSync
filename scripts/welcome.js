@@ -12,6 +12,19 @@ try {
   }
 } catch (e) {}
 
+// Subtle 3D parallax effect for developer side motifs
+document.addEventListener('mousemove', e => {
+  const mouseX = e.clientX / window.innerWidth - 0.5;
+  const mouseY = e.clientY / window.innerHeight - 0.5;
+
+  document.querySelectorAll('.floating-motif').forEach(el => {
+    const factor = parseFloat(el.getAttribute('data-parallax') || '0.03');
+    const moveX = mouseX * 80 * factor;
+    const moveY = mouseY * 80 * factor;
+    el.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+  });
+});
+
 const updateHeaderStatus = (isConnected, repoName, repoUrl) => {
   if (isConnected) {
     $('#status_badge_header')

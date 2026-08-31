@@ -246,6 +246,56 @@ function getDifficultyFolder(difficulty) {
   return 'Easy';
 }
 
+function normalizeLanguageDir(language) {
+  if (!language) return 'Code';
+  const norm = String(language).trim().toLowerCase();
+  if (norm === 'java') return 'Java';
+  if (norm === 'python' || norm === 'python3' || norm === 'pandas') return 'Python';
+  if (norm === 'c++' || norm === 'cpp') return 'C++';
+  if (norm === 'c') return 'C';
+  if (norm === 'javascript' || norm === 'js') return 'JavaScript';
+  if (norm === 'typescript' || norm === 'ts') return 'TypeScript';
+  if (norm === 'c#' || norm === 'cs' || norm === 'csharp') return 'CSharp';
+  if (norm === 'go' || norm === 'golang') return 'Go';
+  if (norm === 'rust') return 'Rust';
+  if (norm === 'kotlin') return 'Kotlin';
+  if (norm === 'swift') return 'Swift';
+  if (norm === 'php') return 'PHP';
+  if (norm === 'mysql' || norm === 'ms sql server' || norm === 'oracle' || norm === 'sql') return 'SQL';
+  if (norm === 'dart') return 'Dart';
+  if (norm === 'elixir') return 'Elixir';
+  if (norm === 'erlang') return 'Erlang';
+  if (norm === 'racket') return 'Racket';
+  if (norm === 'ruby') return 'Ruby';
+  if (norm === 'scala') return 'Scala';
+
+  const clean = String(language).trim().replace(/[\\/:*?"<>|]/g, '');
+  if (!clean) return 'Code';
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function getLanguageExtension(language) {
+  if (!language) return '.txt';
+  if (languages[language]) return languages[language];
+  const langDir = normalizeLanguageDir(language);
+  if (languages[langDir]) return languages[langDir];
+  const norm = String(language).trim().toLowerCase();
+  if (norm === 'java') return '.java';
+  if (norm === 'python' || norm === 'python3' || norm === 'pandas') return '.py';
+  if (norm === 'c++' || norm === 'cpp') return '.cpp';
+  if (norm === 'c') return '.c';
+  if (norm === 'javascript' || norm === 'js') return '.js';
+  if (norm === 'typescript' || norm === 'ts') return '.ts';
+  if (norm === 'c#' || norm === 'cs' || norm === 'csharp') return '.cs';
+  if (norm === 'go' || norm === 'golang') return '.go';
+  if (norm === 'rust') return '.rs';
+  if (norm === 'kotlin') return '.kt';
+  if (norm === 'swift') return '.swift';
+  if (norm === 'php') return '.php';
+  if (norm === 'mysql' || norm === 'ms sql server' || norm === 'oracle' || norm === 'sql') return '.sql';
+  return '.txt';
+}
+
 function getLangSlug(language) {
   if (!language) return 'code';
   const norm = String(language).trim().toLowerCase();
@@ -280,12 +330,11 @@ function languageKeyFromExt(extOrName) {
 }
 
 function getSolutionFilename(language, approachNumber = 1) {
-  const ext = languages[language] || (languages[languageKeyFromExt(language)] || '.txt');
-  const slug = getLangSlug(language);
+  const ext = getLanguageExtension(language);
   if (approachNumber <= 1) {
-    return `solution-${slug}${ext}`;
+    return `solution${ext}`;
   }
-  return `solution-${slug}-approach-${approachNumber}${ext}`;
+  return `solution-${approachNumber}${ext}`;
 }
 
 function formatProblemFolderName(numericId, slug, problemName) {
@@ -304,18 +353,53 @@ function formatProblemFolderName(numericId, slug, problemName) {
   return 'unknown-problem';
 }
 
-function getNewProblemPath(difficulty, numericId, slug, problemName) {
-  const folderName = formatProblemFolderName(numericId, slug, problemName);
+function getProblemPath(language, difficulty, numericId, slug, problemName) {
+  const langDir = normalizeLanguageDir(language);
   const diffFolder = getDifficultyFolder(difficulty);
-  return `${diffFolder}/${folderName}`;
+  const folderName = formatProblemFolderName(numericId, slug, problemName);
+  return `${langDir}/${diffFolder}/${folderName}`;
+}
+
+function getNewProblemPath(difficulty, numericId, slug, problemName) {
+  return getProblemPath('Java', difficulty, numericId, slug, problemName);
+}
+
+function hasSolutionForLanguage(files, language) {
+  if (!files) return false;
+  const langExt = getLanguageExtension(language);
+  const langSlug = getLangSlug(language);
+
+  const fileList = Array.isArray(files)
+    ? files.map(f => (typeof f === 'string' ? f : f?.name || ''))
+    : Object.keys(files);
+
+  return fileList.some(filename => {
+    if (!filename || filename === 'README.md' || filename === 'NOTES.md' || filename === 'stats.json') {
+      return false;
+    }
+    const lower = filename.toLowerCase();
+    const extLower = langExt.toLowerCase();
+    const slugLower = langSlug.toLowerCase();
+    if (lower.endsWith(extLower)) return true;
+    if (lower.includes(`-${slugLower}`)) return true;
+    if (lower.includes(`${slugLower}-`)) return true;
+    return false;
+  });
 }
 
 function matchesProblem(dirName, problemName, numericId, slug) {
   if (!dirName) return false;
-  const cleanDir = dirName.replace(/^(Easy|Medium|Hard)\//i, '');
-  if (problemName) {
-    const cleanProblem = problemName.replace(/^(Easy|Medium|Hard)\//i, '');
-    if (cleanDir === cleanProblem || dirName === problemName) return true;
+  const dirStr = String(dirName);
+  const cleanDir = dirStr
+    .replace(/^[^/]+\/(Easy|Medium|Hard)\//i, '')
+    .replace(/^(Easy|Medium|Hard)\//i, '');
+
+  if (problemName != null && problemName !== '') {
+    const probStr = String(problemName);
+    const cleanProblem = probStr
+      .replace(/^[^/]+\/(Easy|Medium|Hard)\//i, '')
+      .replace(/^(Easy|Medium|Hard)\//i, '');
+    if (cleanDir === cleanProblem || dirStr === probStr) return true;
   }
 
   if (numericId != null && numericId !== '') {
@@ -326,7 +410,7 @@ function matchesProblem(dirName, problemName, numericId, slug) {
     }
   }
 
-  if (slug && slug.trim() !== '') {
+  if (slug && typeof slug === 'string' && slug.trim() !== '') {
     const cleanSlug = slug.trim().toLowerCase();
     if (cleanDir.toLowerCase() === cleanSlug || cleanDir.toLowerCase().endsWith(`-${cleanSlug}`)) {
       return true;
@@ -349,15 +433,20 @@ export {
   getBrowser,
   getDifficulty,
   getDifficultyFolder,
+  getLanguageExtension,
   getLangSlug,
   getNewProblemPath,
+  getProblemPath,
   getSolutionFilename,
+  hasSolutionForLanguage,
   isEmptyObject,
   languageKeyFromExt,
   languages,
   LeetSyncError,
   matchesProblem,
   mergeStats,
+  normalizeLanguageDir,
 };
+
 
 

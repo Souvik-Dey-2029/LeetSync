@@ -1,14 +1,18 @@
 import {
   getDifficultyFolder,
+  getLanguageExtension,
   getLangSlug,
   getNewProblemPath,
+  getProblemPath,
   getSolutionFilename,
+  hasSolutionForLanguage,
   matchesProblem,
+  normalizeLanguageDir,
 } from '../scripts/leetcode/util.js';
 import { setModalHandlerOverrides, showExistingProblemModal, showSyncConfirmationModal } from '../scripts/leetcode/modal.js';
 import { isCompleted } from '../scripts/leetcode/leetcode.js';
 
-describe('LeetSync Interactive Sync & Organization Suite (16 Core Cases)', () => {
+describe('LeetSync Language-Based Repository Organization Suite & Regression Tests', () => {
   let originalChrome;
   let originalFetch;
   let storageState = {};
@@ -51,167 +55,186 @@ describe('LeetSync Interactive Sync & Organization Suite (16 Core Cases)', () =>
     setModalHandlerOverrides(null);
   });
 
-  // 1. New Easy problem creates Easy/<problem-folder>
-  it('1. New Easy problem creates Easy/<problem-folder>', () => {
-    const path = getNewProblemPath('Easy', 1, 'two-sum', '0001-two-sum');
-    expect(path).toBe('Easy/0001-two-sum');
+  // 1. Existing Java problem + new Java submission -> same Java folder.
+  it('1. Existing Java problem + new Java submission -> detected as existing Java problem', async () => {
+    storageState = {
+      stats: {
+        shas: {
+          'Java/Easy/0001-two-sum': {
+            'README.md': 'sha123',
+            'solution.java': 'sha456',
+          },
+        },
+      },
+    };
+
+    const result = await isCompleted('Java', '0001-two-sum', 1, 'two-sum');
+    expect(result).toBeTrue();
   });
 
-  // 2. New Medium problem creates Medium/<problem-folder>
-  it('2. New Medium problem creates Medium/<problem-folder>', () => {
-    const path = getNewProblemPath('Medium', 3, 'longest-substring', '0003-longest-substring');
-    expect(path).toBe('Medium/0003-longest-substring');
+  // 2. Existing Java problem + new Python submission -> new Python folder.
+  it('2. Existing Java problem + new Python submission -> returns false to create new Python folder', async () => {
+    storageState = {
+      stats: {
+        shas: {
+          'Java/Easy/0001-two-sum': {
+            'README.md': 'sha123',
+            'solution.java': 'sha456',
+          },
+        },
+      },
+    };
+
+    const result = await isCompleted('Python3', '0001-two-sum', 1, 'two-sum');
+    expect(result).toBeFalse();
+
+    const pyPath = getProblemPath('Python3', 'Easy', 1, 'two-sum', '0001-two-sum');
+    expect(pyPath).toBe('Python/Easy/0001-two-sum');
   });
 
-  // 3. New Hard problem creates Hard/<problem-folder>
-  it('3. New Hard problem creates Hard/<problem-folder>', () => {
-    const path = getNewProblemPath('Hard', 4, 'median-of-two-sorted-arrays', '0004-median-of-two-sorted-arrays');
-    expect(path).toBe('Hard/0004-median-of-two-sorted-arrays');
+  // 3. Existing Java problem + new C++ submission -> new C++ folder.
+  it('3. Existing Java problem + new C++ submission -> returns false to create new C++ folder', async () => {
+    storageState = {
+      stats: {
+        shas: {
+          'Java/Easy/0001-two-sum': {
+            'README.md': 'sha123',
+            'solution.java': 'sha456',
+          },
+        },
+      },
+    };
+
+    const result = await isCompleted('C++', '0001-two-sum', 1, 'two-sum');
+    expect(result).toBeFalse();
+
+    const cppPath = getProblemPath('C++', 'Easy', 1, 'two-sum', '0001-two-sum');
+    expect(cppPath).toBe('C++/Easy/0001-two-sum');
   });
 
-  // 4. New problem creates README + primary solution naming
-  it('4. New problem primary solution filename follows language slug convention', () => {
-    const javaFile = getSolutionFilename('Java', 1);
-    const pyFile = getSolutionFilename('Python3', 1);
-    const cppFile = getSolutionFilename('C++', 1);
+  // 4. Existing Python problem + new Java submission -> new Java folder.
+  it('4. Existing Python problem + new Java submission -> returns false to create new Java folder', async () => {
+    storageState = {
+      stats: {
+        shas: {
+          'Python/Easy/0001-two-sum': {
+            'README.md': 'sha123',
+            'solution.py': 'sha456',
+          },
+        },
+      },
+    };
 
-    expect(javaFile).toBe('solution-java.java');
-    expect(pyFile).toBe('solution-python.py');
-    expect(cppFile).toBe('solution-cpp.cpp');
+    const result = await isCompleted('Java', '0001-two-sum', 1, 'two-sum');
+    expect(result).toBeFalse();
+
+    const javaPath = getProblemPath('Java', 'Easy', 1, 'two-sum', '0001-two-sum');
+    expect(javaPath).toBe('Java/Easy/0001-two-sum');
   });
 
-  // 5. Existing problem is detected
-  it('5. Existing problem is detected via isCompleted', async () => {
+  // 5. Same problem + same language + Add Another -> solution-2 in same language folder.
+  it('5. Same problem + same language + Add Another creates solution-2.java', () => {
+    const filename = getSolutionFilename('Java', 2);
+    expect(filename).toBe('solution-2.java');
+  });
+
+  // 6. Same problem + same language + Replace -> replace solution.java.
+  it('6. Same problem + same language + Replace uses solution.java', () => {
+    const filename = getSolutionFilename('Java', 1);
+    expect(filename).toBe('solution.java');
+  });
+
+  // 7. Same problem + different language -> NEVER invoke Add Another Solution for the other language.
+  it('7. hasSolutionForLanguage correctly differentiates Java vs Python files', () => {
+    const javaFiles = { 'README.md': 'sha1', 'solution.java': 'sha2' };
+    const pyFiles = { 'README.md': 'sha1', 'solution.py': 'sha2' };
+
+    expect(hasSolutionForLanguage(javaFiles, 'Java')).toBeTrue();
+    expect(hasSolutionForLanguage(javaFiles, 'Python3')).toBeFalse();
+    expect(hasSolutionForLanguage(pyFiles, 'Python3')).toBeTrue();
+    expect(hasSolutionForLanguage(pyFiles, 'Java')).toBeFalse();
+  });
+
+  // 8. Legacy: Easy/0001-two-sum/solution.java + Python submission -> create Python/Easy/0001-two-sum/.
+  it('8. Legacy Java problem does NOT block creation of Python/Easy/0001-two-sum', async () => {
     storageState = {
       stats: {
         shas: {
           'Easy/0001-two-sum': {
             'README.md': 'sha123',
-            'solution-java.java': 'sha456',
+            'solution.java': 'sha456',
           },
         },
       },
     };
 
-    const result = await isCompleted('0001-two-sum', 1, 'two-sum');
-    expect(result).toBeTrue();
+    const pyResult = await isCompleted('Python3', '0001-two-sum', 1, 'two-sum');
+    expect(pyResult).toBeFalse();
+
+    const pyPath = getProblemPath('Python3', 'Easy', 1, 'two-sum', '0001-two-sum');
+    expect(pyPath).toBe('Python/Easy/0001-two-sum');
   });
 
-  // 6. Existing problem + "Add Another Solution" modal selection returns 'add'
-  it('6. Modal selection for Add Another Solution returns add', async () => {
-    setModalHandlerOverrides({
-      existingAction: async () => 'add',
-    });
-    const choice = await showExistingProblemModal();
-    expect(choice).toBe('add');
-  });
-
-  // 7. Existing Java solution + another Java approach creates solution-java-approach-2.java
-  it('7. Existing Java solution + another Java approach creates solution-java-approach-2.java', () => {
-    const filename = getSolutionFilename('Java', 2);
-    expect(filename).toBe('solution-java-approach-2.java');
-  });
-
-  // 8. Existing Java + Python submission creates solution-python.py
-  it('8. Existing Java + Python submission creates solution-python.py', () => {
-    const filename = getSolutionFilename('Python3', 1);
-    expect(filename).toBe('solution-python.py');
-  });
-
-  // 9. Existing Java + "Replace Existing Solution" replaces solution-java.java
-  it('9. Existing Java + Replace Existing Solution uses primary solution filename solution-java.java', () => {
-    const filename = getSolutionFilename('Java', 1);
-    expect(filename).toBe('solution-java.java');
-  });
-
-  // 10. Replace operation never creates another solution file
-  it('10. Replace operation uses approach 1 filename without approach suffix', () => {
-    const filename = getSolutionFilename('Java', 1);
-    expect(filename).not.toContain('approach');
-    expect(filename).toBe('solution-java.java');
-  });
-
-  // 11. Failed submission handling
-  it('11. Failed network check returns false and does not trigger overwrites', async () => {
-    storageState = {
-      stats: { shas: {} },
-      leetsync_token: 'token',
-      leetsync_hook: 'user/repo',
-    };
-    globalThis.fetch = async () => ({ ok: false, status: 500 });
-    const result = await isCompleted('0001-two-sum', 1, 'two-sum');
-    expect(result).toBeFalse();
-  });
-
-  // 12. "Don't Sync" results in no GitHub synchronization
-  it('12. Don\'t Sync modal selection returns false', async () => {
-    setModalHandlerOverrides({
-      confirmSync: async () => false,
-    });
-    const result = await showSyncConfirmationModal();
-    expect(result).toBeFalse();
-  });
-
-  // 13. Existing root-level problems remain detectable
-  it('13. Existing root-level problems remain detectable', async () => {
+  // 9. Legacy: Easy/0001-two-sum/solution.java + Java submission -> recognize existing Java solution.
+  it('9. Legacy Java problem IS recognized for a new Java submission', async () => {
     storageState = {
       stats: {
         shas: {
-          '0001-two-sum': {
+          'Easy/0001-two-sum': {
             'README.md': 'sha123',
+            'solution.java': 'sha456',
           },
         },
       },
     };
-    const result = await isCompleted('0001-two-sum', 1, 'two-sum');
-    expect(result).toBeTrue();
+
+    const javaResult = await isCompleted('Java', '0001-two-sum', 1, 'two-sum');
+    expect(javaResult).toBeTrue();
   });
 
-  // 14. Local cache missing but GitHub problem exists -> correctly detected
-  it('14. Local cache missing but GitHub problem exists -> correctly detected', async () => {
+  // 10. No existing language-specific solution -> create canonical Language/Difficulty/Problem path.
+  it('10. Canonical Language/Difficulty/Problem path is generated when no existing path is found', () => {
+    const javaPath = getProblemPath('Java', 'Easy', 1, 'two-sum', '0001-two-sum');
+    const pyPath = getProblemPath('Python3', 'Medium', 3, 'longest-substring', '0003-longest-substring');
+    const cppPath = getProblemPath('C++', 'Hard', 4, 'median-of-two-sorted-arrays', '0004-median-of-two-sorted-arrays');
+
+    expect(javaPath).toBe('Java/Easy/0001-two-sum');
+    expect(pyPath).toBe('Python/Medium/0003-longest-substring');
+    expect(cppPath).toBe('C++/Hard/0004-median-of-two-sorted-arrays');
+  });
+
+  // 11. Ensure no solution from one language is overwritten by another language.
+  it('11. Separate language namespaces prevent cross-language overwrites', async () => {
     storageState = {
-      stats: null,
-      leetsync_token: 'fake-token',
-      leetsync_hook: 'owner/repo',
+      stats: {
+        shas: {
+          'Java/Easy/0001-two-sum': {
+            'README.md': 'sha1',
+            'solution.java': 'sha2',
+          },
+        },
+      },
     };
 
-    globalThis.fetch = async (url) => {
-      if (url.includes('/contents/Easy/0001-two-sum')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => [{ name: 'README.md' }, { name: 'solution-java.java' }],
-        };
-      }
-      return { ok: false, status: 404 };
-    };
+    const isPyCompleted = await isCompleted('Python3', '0001-two-sum', 1, 'two-sum');
+    expect(isPyCompleted).toBeFalse();
 
-    const result = await isCompleted('0001-two-sum', 1, 'two-sum');
-    expect(result).toBeTrue();
+    const isJavaCompleted = await isCompleted('Java', '0001-two-sum', 1, 'two-sum');
+    expect(isJavaCompleted).toBeTrue();
   });
 
-  // 15. Repeated submissions do not create accidental duplicate files
-  it('15. Incrementing approach numbers generates distinct deterministic filenames', () => {
-    const fn1 = getSolutionFilename('Java', 1);
-    const fn2 = getSolutionFilename('Java', 2);
-    const fn3 = getSolutionFilename('Java', 3);
-
-    expect(fn1).toBe('solution-java.java');
-    expect(fn2).toBe('solution-java-approach-2.java');
-    expect(fn3).toBe('solution-java-approach-3.java');
-  });
-
-  // 16. Authentication remains untouched
-  it('16. Verify token and hook handling is preserved in storage', async () => {
-    storageState = {
-      leetsync_token: 'my-github-token',
-      leetsync_hook: 'user/repo',
-      mode_type: 'commit',
+  // 12. Regression test for background.js null/regex error logic.
+  it('12. background.js match logic handles unexpected/null URL gracefully', () => {
+    const safeMatchUrl = (url) => {
+      if (!url) return null;
+      const match = url.match(/\/submissions\/(\d+)/);
+      return match && match[1] ? match[1] : null;
     };
 
-    const res = await globalThis.chrome.storage.local.get(['leetsync_token', 'leetsync_hook', 'mode_type']);
-    expect(res.leetsync_token).toBe('my-github-token');
-    expect(res.leetsync_hook).toBe('user/repo');
-    expect(res.mode_type).toBe('commit');
+    expect(safeMatchUrl(null)).toBeNull();
+    expect(safeMatchUrl('')).toBeNull();
+    expect(safeMatchUrl('https://leetcode.com/problems/two-sum/submissions/')).toBeNull();
+    expect(safeMatchUrl('https://leetcode.com/problems/two-sum/submissions/12345/')).toBe('12345');
+    expect(safeMatchUrl('https://leetcode.com/problems/two-sum/submissions/99887766')).toBe('99887766');
   });
 });

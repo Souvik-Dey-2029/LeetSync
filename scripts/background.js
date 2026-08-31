@@ -25,13 +25,18 @@ api.runtime.onMessage.addListener(handleMessage);
  * is needed for auth anymore.
  */
 function handleMessage(request, sender, sendResponse) {
-  if (request.type === 'LEETCODE_SUBMISSION') {
+  if (request && request.type === 'LEETCODE_SUBMISSION') {
+    const listener = function (details) {
+      if (details && details.url) {
+        const match = details.url.match(/\/submissions\/(\d+)/);
+        if (match && match[1]) {
+          sendResponse({ submissionId: match[1] });
+          api.webNavigation.onHistoryStateUpdated.removeListener(listener);
+        }
+      }
+    };
     api.webNavigation.onHistoryStateUpdated.addListener(
-      (e = function (details) {
-        const submissionId = details.url.match(/\/submissions\/(\d+)\//)[1];
-        sendResponse({ submissionId });
-        api.webNavigation.onHistoryStateUpdated.removeListener(e);
-      }),
+      listener,
       { url: [{ hostSuffix: 'leetcode.com' }, { pathContains: 'submissions' }] }
     );
   }

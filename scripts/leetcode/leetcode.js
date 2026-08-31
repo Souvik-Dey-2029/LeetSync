@@ -8,13 +8,18 @@ import {
   formatProblemFolderName,
   getBrowser,
   getDifficulty,
+  getLanguageExtension,
+  getLangSlug,
   getNewProblemPath,
+  getProblemPath,
   getSolutionFilename,
+  hasSolutionForLanguage,
   isEmptyObject,
   languageKeyFromExt,
   LeetSyncError,
   matchesProblem,
   mergeStats,
+  normalizeLanguageDir,
 } from './util.js';
 import { showSyncConfirmationModal, showExistingProblemModal } from './modal.js';
 import { appendProblemToReadme, sortTopicsInReadme } from './readmeTopics.js';
@@ -141,14 +146,40 @@ async function setPersistentStats(localStats) {
 
 const inFlightUploads = new Set();
 
-const findExistingProblemPath = async (problemName, numericId, slug) => {
+const findExistingProblemPath = async (language, problemName, numericId, slug) => {
+  let lang = language;
+  let pName = problemName;
+  let numId = numericId;
+  let titleSlug = slug;
+  let isExplicitLanguageCall = true;
+
+  if (slug === undefined || !language || typeof language !== 'string' || (!problemName && !numericId && !slug)) {
+    lang = 'Java';
+    pName = language;
+    numId = problemName;
+    titleSlug = numericId;
+    isExplicitLanguageCall = false;
+  }
+
+  const langDir = normalizeLanguageDir(lang);
+
   const data = await api.storage.local.get('stats');
   const stats = data?.stats;
 
   if (stats?.shas) {
     for (const dirPath of Object.keys(stats.shas)) {
-      if (matchesProblem(dirPath, problemName, numericId, slug)) {
+      if (dirPath.startsWith(`${langDir}/`) && matchesProblem(dirPath, pName, numId, titleSlug)) {
         return dirPath;
+      }
+    }
+
+    for (const dirPath of Object.keys(stats.shas)) {
+      if (!dirPath.includes('/') || dirPath.startsWith('Easy/') || dirPath.startsWith('Medium/') || dirPath.startsWith('Hard/')) {
+        if (matchesProblem(dirPath, pName, numId, titleSlug)) {
+          if (!isExplicitLanguageCall || hasSolutionForLanguage(stats.shas[dirPath], lang)) {
+            return dirPath;
+          }
+        }
       }
     }
   }
@@ -163,19 +194,17 @@ const findExistingProblemPath = async (problemName, numericId, slug) => {
       return null;
     }
 
-    const folderName = formatProblemFolderName(numericId, slug, problemName);
+    const folderName = formatProblemFolderName(numId, titleSlug, pName);
+
     const candidatesToTest = [];
-
     ['Easy', 'Medium', 'Hard'].forEach(diff => {
-      candidatesToTest.push(`${diff}/${folderName}`);
+      candidatesToTest.push(`${langDir}/${diff}/${folderName}`);
     });
-    candidatesToTest.push(folderName);
 
-    if (problemName && problemName !== folderName) {
+    if (pName && pName !== folderName) {
       ['Easy', 'Medium', 'Hard'].forEach(diff => {
-        candidatesToTest.push(`${diff}/${problemName}`);
+        candidatesToTest.push(`${langDir}/${diff}/${pName}`);
       });
-      candidatesToTest.push(problemName);
     }
 
     for (const candidatePath of candidatesToTest) {
@@ -184,9 +213,25 @@ const findExistingProblemPath = async (problemName, numericId, slug) => {
         if (res && res.ok) {
           return candidatePath;
         }
-      } catch (e) {
-        // 404 means path does not exist
-      }
+      } catch (e) {}
+    }
+
+    const legacyCandidates = [];
+    ['Easy', 'Medium', 'Hard'].forEach(diff => {
+      legacyCandidates.push(`${diff}/${folderName}`);
+    });
+    legacyCandidates.push(folderName);
+
+    for (const legacyPath of legacyCandidates) {
+      try {
+        const res = await getGitHubFile(token, hook, legacyPath);
+        if (res && res.ok) {
+          const files = await res.json();
+          if (Array.isArray(files) && (!isExplicitLanguageCall || hasSolutionForLanguage(files, lang))) {
+            return legacyPath;
+          }
+        }
+      } catch (e) {}
     }
 
     try {
@@ -195,13 +240,28 @@ const findExistingProblemPath = async (problemName, numericId, slug) => {
         const jsonRes = await res.json();
         const pStats = JSON.parse(decode(jsonRes.content));
         const remoteShas = pStats?.leetcode?.shas || {};
+
         for (const dirPath of Object.keys(remoteShas)) {
-          if (matchesProblem(dirPath, problemName, numericId, slug)) {
+          if (dirPath.startsWith(`${langDir}/`) && matchesProblem(dirPath, pName, numId, titleSlug)) {
             if (pStats?.leetcode) {
               const mergedStats = mergeStats(pStats.leetcode, stats || {});
               await api.storage.local.set({ stats: mergedStats });
             }
             return dirPath;
+          }
+        }
+
+        for (const dirPath of Object.keys(remoteShas)) {
+          if (!dirPath.includes('/') || dirPath.startsWith('Easy/') || dirPath.startsWith('Medium/') || dirPath.startsWith('Hard/')) {
+            if (matchesProblem(dirPath, pName, numId, titleSlug)) {
+              if (!isExplicitLanguageCall || hasSolutionForLanguage(remoteShas[dirPath], lang)) {
+                if (pStats?.leetcode) {
+                  const mergedStats = mergeStats(pStats.leetcode, stats || {});
+                  await api.storage.local.set({ stats: mergedStats });
+                }
+                return dirPath;
+              }
+            }
           }
         }
       }
@@ -213,8 +273,8 @@ const findExistingProblemPath = async (problemName, numericId, slug) => {
   return null;
 };
 
-const isCompleted = async (problemName, numericId, slug) => {
-  const existingPath = await findExistingProblemPath(problemName, numericId, slug);
+const isCompleted = async (language, problemName, numericId, slug) => {
+  const existingPath = await findExistingProblemPath(language, problemName, numericId, slug);
   if (existingPath) {
     const updatedStats = await getAndInitializeStats(existingPath);
     if (!updatedStats.shas[existingPath]['README.md']) {
@@ -486,15 +546,17 @@ function loader(leetCode) {
       const titleSlug = leetCode.getProblemSlug ? leetCode.getProblemSlug() : null;
       const difficulty = leetCode.parseDifficulty ? leetCode.parseDifficulty() : leetCode.difficulty;
 
-      if (inFlightUploads.has(problemName)) {
-        console.log(`LeetSync: Upload for ${problemName} is already in flight.`);
+      const rawLang = leetCode.submissionData?.lang?.verboseName || leetCode.getLanguageName?.() || 'Java';
+
+      if (inFlightUploads.has(`${rawLang}:${problemName}`)) {
+        console.log(`LeetSync: Upload for ${rawLang}:${problemName} is already in flight.`);
         leetCode.markAlreadySynced(
           'Already synced — this LeetCode problem is already in your GitHub repository.'
         );
         return;
       }
 
-      inFlightUploads.add(problemName);
+      inFlightUploads.add(`${rawLang}:${problemName}`);
 
       try {
         const { leetsync_token: token, leetsync_hook: hook, stats } = await api.storage.local.get([
@@ -503,14 +565,10 @@ function loader(leetCode) {
           'stats',
         ]);
 
-        const langExt = leetCode.getLanguageExtension();
-        if (!langExt) {
-          throw new LeetSyncError('LanguageNotFound');
-        }
+        const langExt = leetCode.getLanguageExtension ? leetCode.getLanguageExtension() : getLanguageExtension(rawLang);
+        const langVerbose = rawLang;
 
-        const langVerbose = leetCode.submissionData?.lang?.verboseName || languageKeyFromExt(langExt);
-
-        const existingPath = await findExistingProblemPath(problemName, numericId, titleSlug);
+        const existingPath = await findExistingProblemPath(langVerbose, problemName, numericId, titleSlug);
 
         let targetDirPath;
         let filename;
@@ -527,7 +585,7 @@ function loader(leetCode) {
             hook
           );
         } else {
-          targetDirPath = getNewProblemPath(difficulty, numericId, titleSlug, problemName);
+          targetDirPath = getProblemPath(langVerbose, difficulty, numericId, titleSlug, problemName);
           filename = getSolutionFilename(langVerbose, 1);
         }
 
@@ -569,7 +627,7 @@ function loader(leetCode) {
         // Increments local and persistent stats
         await incrementStats(difficulty || leetCode.difficulty, targetDirPath).then(setPersistentStats);
       } finally {
-        inFlightUploads.delete(problemName);
+        inFlightUploads.delete(`${rawLang}:${problemName}`);
       }
     } catch (err) {
       leetCode.markUploadFailed();

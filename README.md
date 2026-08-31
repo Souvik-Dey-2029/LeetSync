@@ -1,12 +1,7 @@
 <h1 align="center">
-  <a href="https://standardjs.com"><img src="assets/octocode.png" alt="LeetSync - Automatically sync your code to your own GitHub repository." width="400"></a>
-  <br>
-  LeetSync - Automatically sync your code to your own GitHub repository.
-  <br>
-  <br>
-</h1>
-
-<h1 align="center">
+  <a href="https://github.com/Souvik-Dey-2029/LeetSync">
+    <img src="assets/octocode.png" alt="LeetSync - Automatically sync your code to your own GitHub repository." width="400">
+  </a>
   <br>
   <strong>LeetSync</strong>
   <br>
@@ -29,24 +24,26 @@
 
 **LeetSync** is a local-first Chrome and Firefox browser extension (Manifest V3) that automatically synchronizes your accepted [LeetCode](https://leetcode.com/) submissions directly to your own GitHub repository.
 
-Building a visible history of data structures & algorithms problem-solving on GitHub is one of the most effective ways for software engineers to demonstrate consistent practice to recruiters and open-source collaborators. However, manually copying solution code, creating organized directory structures, and writing markdown problem descriptions is tedious.
+Building a visible history of Data Structures & Algorithms problem-solving on GitHub is a useful way to maintain and showcase consistent practice. However, manually copying solution code, creating organized directory structures, and writing problem descriptions can become tedious.
 
-LeetSync automates the entire process seamlessly without relying on third-party backend servers, remote databases, or shared OAuth applications.
+LeetSync automates this workflow directly from your browser without relying on third-party backend servers, remote databases, or shared OAuth applications.
 
-```
+```text
        LeetCode Submission (Accepted)
-                     │
-                     ▼
-         Interactive Sync Modal
+                    │
+                    ▼
+          Interactive Sync Modal
         [ Yes, Sync ] [ Don't Sync ]
-                     │
-                     ▼
-                 LeetSync
+                    │
+                    ▼
+               LeetSync
         (Chrome Extension Engine)
-                     │
-                     ▼
-      Language & Difficulty Hierarchy
-         Your GitHub Repository
+                    │
+                    ▼
+       Language & Difficulty Hierarchy
+                    │
+                    ▼
+          Your GitHub Repository
 ```
 
 ---
@@ -55,64 +52,148 @@ LeetSync automates the entire process seamlessly without relying on third-party 
 
 ### ✅ Implemented & Verified
 
-- **Privacy-First Architecture**: 100% client-side operation with zero LeetSync backend servers or databases. All OAuth tokens and user preferences remain stored inside your browser's `chrome.storage.local`.
-- **GitHub OAuth Device Flow**: Secure authentication via GitHub's official RFC 8628 Device Flow. Users supply their own public OAuth Client ID—no client secrets are ever transmitted or stored.
-- **Repository Setup & Linking**: Create a new private GitHub repository directly from the extension dashboard or link an existing repository.
-- **Interactive Submission Confirmation**: Prompts you upon an accepted LeetCode submission (`Sync this submission to GitHub?`) so you retain complete control over what gets committed.
-- **Language-Based Repository Hierarchy**: Automatically organizes solutions by programming language and difficulty level:
+* **Privacy-First Architecture**: 100% client-side operation with zero LeetSync backend servers or databases. Authentication tokens and user preferences remain stored inside the browser's extension storage.
+
+* **GitHub OAuth Device Flow**: Secure authentication through GitHub's official Device Flow. Each user configures their own public OAuth Client ID. No Client Secret is required or stored by LeetSync.
+
+* **Repository Setup & Linking**: Create a new GitHub repository directly from the extension dashboard or link an existing repository.
+
+* **Interactive Submission Confirmation**: After an accepted LeetCode submission, LeetSync asks whether the submission should be synchronized to GitHub, giving the user control over what gets committed.
+
+* **Language-Based Repository Hierarchy**: Solutions are automatically organized first by programming language and then by difficulty:
+
+  ```text
+  <Language>/<Difficulty>/<Problem>/
   ```
-  <Language>/<Difficulty>/<NumericId-ProblemSlug>/
-  ```
-- **Multiple Solution Support**: When submitting multiple approaches for the same problem in the same language, LeetSync offers an interactive choice to **Add Another Solution** (saving as `problem-2.ext`, `problem-3.ext`) or **Replace Existing Solution**.
-- **Automatic README Generation**: Creates detailed `README.md` files inside each problem folder featuring problem title, difficulty tag, formatted description HTML converted to markdown, and topic metadata.
-- **Duplicate & Race Condition Protection**: Performs remote GitHub API checks to prevent redundant uploads and includes an in-flight upload guard to protect against rapid duplicate submissions.
-- **Dashboard & Solved Statistics**: Real-time developer dashboard (`welcome.html`) tracking Total, Easy, Medium, and Hard solved counts with repository status management.
-- **Cross-Browser Support**: Manifest V3 compliant bundle generation for both Chrome and Firefox browsers.
+
+* **Multiple Solution Support**: When submitting another approach for an existing problem in the same language, LeetSync allows the user to either **Add Another Solution** or **Replace Existing Solution**.
+
+* **Automatic README Generation**: Creates a `README.md` inside each problem directory containing the problem title, difficulty, description, and topic information.
+
+* **Duplicate & Race Condition Protection**: Performs GitHub checks to avoid unnecessary duplicate uploads and protects against rapid repeated submissions.
+
+* **Dashboard & Solved Statistics**: Provides a dashboard for tracking solved-problem statistics and repository status.
+
+* **Cross-Browser Support**: Manifest V3-compatible builds are generated for Chrome and Firefox.
 
 ---
 
 ## Repository Folder Structure
 
-LeetSync organizes your solutions in a clean, language-first directory structure at the root of your connected GitHub repository:
+LeetSync uses a language-first directory structure in the connected GitHub repository.
 
-```
+```text
 ├── Java/
-│   └── Easy/
-│       └── 0001-two-sum/
-│           ├── README.md
-│           ├── two-sum.java
-│           └── two-sum-2.java
-├── Python3/
-│   └── Medium/
-│       └── 0003-longest-substring-without-repeating-characters/
-│           ├── README.md
-│           └── longest-substring-without-repeating-characters.py
-├── C++/
+│   ├── Easy/
+│   │   └── 0001-two-sum/
+│   │       ├── README.md
+│   │       ├── solution.java
+│   │       └── solution-2.java
+│   ├── Medium/
 │   └── Hard/
-│       └── 0004-median-of-two-sorted-arrays/
-│           ├── README.md
-│           └── median-of-two-sorted-arrays.cpp
+│
+├── Python/
+│   ├── Easy/
+│   │   └── 0001-two-sum/
+│   │       ├── README.md
+│   │       └── solution.py
+│   ├── Medium/
+│   └── Hard/
+│
+├── C++/
+│   ├── Easy/
+│   ├── Medium/
+│   └── Hard/
+│
+├── JavaScript/
+│   ├── Easy/
+│   ├── Medium/
+│   └── Hard/
+│
 ├── stats.json
 └── README.md
 ```
+
+### Example
+
+A Java solution:
+
+```text
+Java/Easy/0001-two-sum/
+├── README.md
+└── solution.java
+```
+
+Another Java approach:
+
+```text
+Java/Easy/0001-two-sum/
+├── README.md
+├── solution.java
+└── solution-2.java
+```
+
+The same problem solved in Python is stored separately:
+
+```text
+Python/Easy/0001-two-sum/
+├── README.md
+└── solution.py
+```
+
+This keeps solutions for different programming languages separated while maintaining the Easy / Medium / Hard organization.
 
 ---
 
 ## GitHub Authentication Setup
 
-LeetSync does not use a central developer server or shared OAuth client secret. Each user configures their own GitHub OAuth Application Client ID once during installation.
+LeetSync does **not** use a central developer server or shared OAuth credentials.
 
-### Step-by-Step Setup:
+**Each user must configure their own GitHub OAuth Application Client ID and authenticate their own GitHub account. LeetSync does not contain or share the author's GitHub credentials, access tokens, or authentication session.**
 
-1. Navigate to your GitHub account settings: [github.com/settings/developers](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App**.
-2. Register a new application with any name (e.g., `My LeetSync Extension`).
-3. Set **Homepage URL** and **Authorization callback URL** to `https://github.com/` (required by GitHub's form, though unused by the Device Flow).
-4. After saving, click **Enable Device Flow** under your OAuth App settings and turn it on.
-5. Copy the generated **Client ID** (public identifier).
-6. Right-click the LeetSync extension icon → **Options** (or click **Settings ⚙** in the popup/dashboard), paste your Client ID, and click **Save**.
-7. Click **Connect GitHub Account**, copy the 8-character user code displayed by LeetSync, and approve the activation prompt on GitHub.
+### Step-by-Step Setup
 
-> **Note**: Device Flow authentication only uses a public Client ID. No Client Secret is required or stored.
+1. Go to your GitHub account settings:
+
+   [GitHub Developer Settings](https://github.com/settings/developers)
+
+2. Open **OAuth Apps** → **New OAuth App**.
+
+3. Register a new application.
+
+   Example name:
+
+   ```text
+   My LeetSync Extension
+   ```
+
+4. Set the required application URLs:
+
+   ```text
+   Homepage URL:
+   https://github.com/
+
+   Authorization callback URL:
+   https://github.com/
+   ```
+
+   These URLs are required by GitHub's OAuth App form but are not used as the callback mechanism by the Device Flow.
+
+5. Enable **Device Flow** in your OAuth App settings.
+
+6. Copy the generated **Client ID**.
+
+7. Open the LeetSync extension options/settings and enter **your own Client ID**.
+
+8. Click **Connect GitHub Account**.
+
+9. LeetSync will display an 8-character device code.
+
+10. Approve the authentication request on GitHub.
+
+After authentication, the extension uses the authenticated user's GitHub account for repository operations.
+
+> **Important:** Never share or publish a GitHub access token or Client Secret. LeetSync does not require a Client Secret for Device Flow authentication.
 
 ---
 
@@ -120,33 +201,58 @@ LeetSync does not use a central developer server or shared OAuth client secret. 
 
 ### Prerequisites
 
-- **Node.js**: v18.x or higher
-- **npm**: v9.x or higher
+* **Node.js**: v18.x or higher
+* **npm**: v9.x or higher
 
 ### Build Instructions
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/Souvik-Dey-2029/LeetSync.git
    cd LeetSync
    ```
 
 2. Install dependencies:
+
    ```bash
-   npm run setup
+   npm install
    ```
 
-3. Build production extension bundles:
+3. Build the production extension:
+
    ```bash
    npm run build
    ```
-   This generates ready-to-load extension bundles in `dist/chrome` and `dist/firefox`.
 
-4. Load into Chrome:
-   - Open Chrome and navigate to `chrome://extensions`.
-   - Enable **Developer mode** using the toggle in the top-right corner.
-   - Click **Load unpacked**.
-   - Select the `./dist/chrome` directory.
+   This generates ready-to-load extension bundles in:
+
+   ```text
+   dist/chrome
+   dist/firefox
+   ```
+
+4. Load the Chrome build:
+
+   * Open Chrome.
+
+   * Navigate to:
+
+     ```text
+     chrome://extensions
+     ```
+
+   * Enable **Developer mode**.
+
+   * Click **Load unpacked**.
+
+   * Select:
+
+     ```text
+     dist/chrome
+     ```
+
+5. Configure your own GitHub OAuth Client ID and authenticate your GitHub account using the setup instructions above.
 
 ---
 
@@ -154,52 +260,71 @@ LeetSync does not use a central developer server or shared OAuth client secret. 
 
 ### Available npm Scripts
 
-| Script | Command | Description |
-| :--- | :--- | :--- |
-| `npm run build` | `webpack --mode=production` | Compiles extension bundles into `dist/chrome` and `dist/firefox`. |
-| `npm run dev` | `webpack --mode=production --watch` | Recompiles automatically on source changes. |
-| `npm test` | `jasmine` | Executes the unit test suite (29 specs). |
-| `npm run format` | `prettier --write **/*.{js,css,html}` | Auto-formats codebase files. |
-| `npm run lint` | `eslint **/*.{js,ts} --fix` | Runs ESLint analysis and fixes code style issues. |
+| Script      | Command          | Description                                         |
+| ----------- | ---------------- | --------------------------------------------------- |
+| Build       | `npm run build`  | Builds Chrome and Firefox production bundles        |
+| Development | `npm run dev`    | Watches and rebuilds the project during development |
+| Tests       | `npm test`       | Executes the Jasmine unit test suite                |
+| Format      | `npm run format` | Formats project source files                        |
+| Lint        | `npm run lint`   | Runs ESLint analysis                                |
 
 ### Running Tests
 
-LeetSync uses [Jasmine](https://jasmine.github.io/) as its official test runner. To execute the automated unit test suite:
+LeetSync uses [Jasmine](https://jasmine.github.io/) for automated testing.
+
+Run:
 
 ```bash
 npm test
 ```
 
-*All 29 unit test specs cover submission sync modal logic, duplicate problem protection remote API checks, README topic tag parsing, and path utility functions.*
+The test suite covers areas including:
+
+* Submission synchronization
+* Interactive sync confirmation
+* Duplicate protection
+* Multiple solution handling
+* Language-based repository organization
+* README generation
+* Path utilities
+* GitHub API-related logic
+* Race-condition protection
 
 ---
 
 ## Project Architecture
 
-```
+```text
 LeetSync/
-├── manifest-chrome.json     # Chrome Manifest V3 configuration
-├── manifest-firefox.json    # Firefox Manifest V3 configuration
-├── webpack.config.js        # Build configuration & asset pipeline
-├── options.html             # Options page for GitHub Client ID & Auth
-├── popup.html               # Extension popup interface
-├── welcome.html             # Developer dashboard UI
+├── manifest-chrome.json       # Chrome Manifest V3 configuration
+├── manifest-firefox.json      # Firefox Manifest V3 configuration
+├── webpack.config.js          # Build configuration
+├── options.html               # GitHub Client ID & authentication settings
+├── popup.html                 # Extension popup interface
+├── welcome.html               # Dashboard interface
+│
 ├── css/
-│   └── welcome.css          # Design system & 3D visual workspace styles
+│   ├── options.css
+│   ├── popup.css
+│   └── welcome.css
+│
 ├── scripts/
-│   ├── background.js        # Extension background service worker
-│   ├── githubDeviceAuth.js  # OAuth Device Flow authorization client
-│   ├── options.js           # Options page event handlers
-│   ├── popup.js             # Extension popup controller
-│   ├── welcome.js           # Dashboard controller & interactive stats
+│   ├── background.js          # Extension background service worker
+│   ├── githubDeviceAuth.js    # GitHub OAuth Device Flow client
+│   ├── options.js             # Options page controller
+│   ├── popup.js               # Popup controller
+│   ├── welcome.js             # Dashboard controller
+│   │
 │   └── leetcode/
-│       ├── leetcode.js      # Core synchronization engine & GitHub API client
-│       ├── modal.js         # Confirmation & solution choice modal DOM handlers
-│       ├── readmeTopics.js  # Problem description & topic markdown parser
-│       ├── submitBtn.js     # LeetCode DOM submit listener
-│       ├── util.js          # Path formatting & extension helper utilities
-│       └── versions.js      # LeetCode UI V1 / V2 DOM & GraphQL adapters
-└── spec/                    # Automated Jasmine unit testing framework
+│       ├── leetcode.js        # Core synchronization engine
+│       ├── modal.js            # Confirmation and solution-choice modals
+│       ├── readmeTopics.js    # README/problem metadata generation
+│       ├── submitBtn.js       # LeetCode submission listener
+│       ├── util.js             # Path and language utilities
+│       └── versions.js          # LeetCode UI/GraphQL adapters
+│
+└── spec/
+    └── ...                    # Jasmine test specifications
 ```
 
 ---
@@ -208,24 +333,33 @@ LeetSync/
 
 ### ⏳ Planned Features
 
-- **Automated PDF Export**: Option to generate and upload PDF versions of problem descriptions alongside code solutions.
-- **Historical Submission Batch Sync**: Bulk synchronization of past accepted submissions from LeetCode submission history.
-- **Enhanced GFG/HackerRank Integrations**: Expanding the multi-platform sync engine.
+* **Historical Submission Batch Sync**: Synchronize previously accepted LeetCode submissions in bulk.
+* **Enhanced GFG/HackerRank Integrations**: Expand synchronization to additional coding platforms.
+* **Language-Specific Repository Views**: Further customization of repository organization and filtering.
 
 ---
 
 ## Limitations
 
-- **DOM Dependency**: LeetSync relies on LeetCode's active web DOM and GraphQL endpoint structures. Significant changes to LeetCode's frontend may require extension updates.
-- **GitHub API Rate Limits**: Unauthenticated or excessively frequent API requests are subject to standard GitHub REST API rate limits (5,000 requests/hour for authenticated user tokens).
+* **DOM Dependency**: LeetSync relies on LeetCode's web DOM and GraphQL structures. Significant changes to LeetCode's frontend may require extension updates.
+
+* **GitHub API Rate Limits**: GitHub API requests are subject to GitHub's standard rate limits.
+
+* **User OAuth Configuration**: Because LeetSync does not use a shared OAuth application, each user must configure their own GitHub OAuth Client ID.
 
 ---
 
 ## Privacy & Security
 
-- **Local Storage**: All authentication tokens (`leetsync_token`) and user settings are stored strictly in your browser's private extension storage (`chrome.storage.local`).
-- **Direct API Communication**: LeetSync communicates directly with `api.github.com` and `leetcode.com`. No intermediate proxy servers touch your code or credentials.
-- **No Client Secrets**: Built using GitHub OAuth Device Flow, eliminating the need to hardcode or store sensitive application client secrets.
+* **Local Storage**: Authentication tokens and user settings are stored in the browser's private extension storage.
+
+* **Direct API Communication**: LeetSync communicates directly with GitHub and LeetCode. No intermediate LeetSync backend server handles user credentials or solution code.
+
+* **No Shared GitHub Credentials**: Every user authenticates their own GitHub account.
+
+* **No Client Secret**: GitHub Device Flow does not require LeetSync to distribute or store an OAuth Client Secret.
+
+* **No Analytics Backend**: LeetSync does not rely on a separate analytics or telemetry server for synchronization.
 
 ---
 
@@ -239,11 +373,14 @@ LeetSync is an independent open-source project and is not affiliated with, maint
 
 LeetSync is released under the [MIT License](./LICENSE).
 
-This project originated as a fork/rebuild of [LeetHub 2.0](https://github.com/arunbhardwaj/LeetHub-2.0) by Arun Bhardwaj. All original MIT licensing and copyright requirements have been preserved.
+This project originated as a fork/rebuild of [LeetHub 2.0](https://github.com/arunbhardwaj/LeetHub-2.0) by Arun Bhardwaj.
+
+All original MIT licensing and copyright requirements have been preserved.
 
 ---
 
 ## Author
 
-**Souvik Dey**  
-- GitHub: [@Souvik-Dey-2029](https://github.com/Souvik-Dey-2029)
+**Souvik Dey**
+
+* GitHub: [@Souvik-Dey-2029](https://github.com/Souvik-Dey-2029)

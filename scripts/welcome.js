@@ -4,6 +4,35 @@ const api = getBrowser();
 
 $('#settings_link').attr('href', api.runtime.getURL('options.html'));
 
+// Populate manifest version dynamically
+try {
+  const manifest = api.runtime.getManifest();
+  if (manifest && manifest.version) {
+    $('#ext_version').text(manifest.version);
+  }
+} catch (e) {}
+
+const updateHeaderStatus = (isConnected, repoName, repoUrl) => {
+  if (isConnected) {
+    $('#status_badge_header')
+      .removeClass('disconnected')
+      .addClass('connected')
+      .html('<span class="status-dot"></span><span id="status_text_header">GitHub Connected</span>');
+    if (repoName) {
+      $('#display_repo_name').text(repoName);
+      const url = repoUrl || `https://github.com/${repoName}`;
+      $('#open_repo_btn').attr('href', url).css('display', 'inline-flex');
+    }
+  } else {
+    $('#status_badge_header')
+      .removeClass('connected')
+      .addClass('disconnected')
+      .html('<span class="status-dot"></span><span id="status_text_header">Not Connected</span>');
+    $('#display_repo_name').text('No repository connected');
+    $('#open_repo_btn').css('display', 'none');
+  }
+};
+
 const option = () => {
   return $('#type').val();
 };
@@ -15,7 +44,7 @@ const repositoryName = () => {
 const createRepoDescription =
   'A collection of LeetCode questions to ace the coding interview! - Synced using LeetSync';
 
-/* Sync's local storage with persistent stats and returns the pulled stats. Currently only syncs when we install, or unlink then relink */
+/* Sync's local storage with persistent stats and returns the pulled stats. */
 const syncStats = async () => {
   let { leetsync_hook, leetsync_token, sync_stats, stats } = await api.storage.local.get([
     'leetsync_token',
@@ -53,12 +82,10 @@ const syncStats = async () => {
     console.log(`Successfully synced local stats with GitHub stats`)
   );
 
-  // emulate the nested return obj of api.storage.local.get('stats')
   return { stats: pStats.leetcode };
 };
 
 const getCreateErrorString = (statusCode, name) => {
-  /* Status codes for creating of repo */
   const errorStrings = {
     304: `Error creating ${name} - Unable to modify repository. Try again later!`,
     400: `Error creating ${name} - Bad POST request, make sure you're not overriding any existing scripts`,
@@ -66,7 +93,7 @@ const getCreateErrorString = (statusCode, name) => {
     403: `Error creating ${name} - Forbidden access to repository. Try again later!`,
     422: `Error creating ${name} - Unprocessable Entity. Repository may have already been created. Try Linking instead (select 2nd option).`,
   };
-  return errorStrings[statusCode];
+  return errorStrings[statusCode] || `Error creating ${name} (Status code: ${statusCode})`;
 };
 
 const handleRepoCreateError = (statusCode, name) => {
@@ -100,7 +127,7 @@ const createRepo = async (token, name) => {
   res = await res.json();
 
   /* Set Repo Hook, and set mode type to commit */
-  api.storage.local.set({ mode_type: 'commit', leetsync_hook: res.full_name });
+  api.storage.local.set({ mode_type: 'commit', leetsync_hook: res.full_name, repo: res.html_url });
   await api.storage.local.remove('stats');
   $('#error').hide();
   $('#success').html(
@@ -108,21 +135,22 @@ const createRepo = async (token, name) => {
   );
   $('#success').show();
   $('#unlink').show();
+  updateHeaderStatus(true, res.full_name, res.html_url);
+
   /* Show new layout */
   document.getElementById('hook_mode').style.display = 'none';
-  document.getElementById('commit_mode').style.display = 'inherit';
+  document.getElementById('commit_mode').style.display = 'block';
 };
 
 const getLinkErrorString = (statusCode, name) => {
-  /* Status codes for linking repo */
   const errorStrings = {
-    301: `Error linking <a target="blank" href="${`https://github.com/${name}`}">${name}</a> to LeetSync. <br> This repository has been moved permenantly. Try creating a new one.`,
-    403: `Error linking <a target="blank" href="${`https://github.com/${name}`}">${name}</a> to LeetSync. <br> Forbidden action. Please make sure you have the right access to this repository.`,
-    404: `Error linking <a target="blank" href="${`https://github.com/${name}`}">${name}</a> to LeetSync. <br> Resource not found. Make sure you enter the right repository name.`,
+    301: `Error linking <a target="blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> This repository has been moved permanently. Try creating a new one.`,
+    403: `Error linking <a target="blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> Forbidden action. Please make sure you have write access to this repository.`,
+    404: `Error linking <a target="blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> Resource not found. Make sure you enter the correct repository name.`,
   };
-  return errorStrings[statusCode];
+  return errorStrings[statusCode] || `Error linking ${name} (Status code: ${statusCode})`;
 };
-/* Status codes for linking of repo */
+
 const handleLinkRepoError = (statusCode, name) => {
   $('#success').hide();
   $('#error').html(getLinkErrorString(statusCode, name));
@@ -130,12 +158,6 @@ const handleLinkRepoError = (statusCode, name) => {
   $('#unlink').show();
 };
 
-/* 
-    Method for linking hook with an existing repository 
-    Steps:
-    1. Check if existing repository exists and the user has write access to it.
-    2. Link Hook to it (chrome Storage).
-*/
 const linkRepo = (token, name) => {
   const AUTHENTICATION_URL = `https://api.github.com/repos/${name}`;
 
@@ -145,17 +167,14 @@ const linkRepo = (token, name) => {
       return;
     }
     if (xhr.status !== 200) {
-      // BUG FIX
-      // unable to gain access to repo in commit mode. Must switch to hook mode.
-      /* Set mode type to hook and Repo Hook to NONE */
       handleLinkRepoError(xhr.status, name);
       api.storage.local.set({ mode_type: 'hook', leetsync_hook: null }, () => {
         console.log(`Error linking ${name} to LeetSync`);
         console.log('Defaulted repo hook to NONE');
+        updateHeaderStatus(false);
       });
 
-      /* Hide accordingly */
-      document.getElementById('hook_mode').style.display = 'inherit';
+      document.getElementById('hook_mode').style.display = 'block';
       document.getElementById('commit_mode').style.display = 'none';
       return;
     }
@@ -170,15 +189,16 @@ const linkRepo = (token, name) => {
         );
         $('#success').show();
         $('#unlink').show();
+        updateHeaderStatus(true, res.full_name, res.html_url);
         console.log('Successfully set new repo hook');
       }
     );
+
     /* Get Persistent Stats or Create new stats */
     api.storage.local
       .get('sync_stats')
       .then(data => (data?.sync_stats ? syncStats() : api.storage.local.get('stats')))
       .then(data => {
-        /* Get problems solved count */
         const stats = data?.stats;
         $('#p_solved').text(stats?.solved ?? 0);
         $('#p_solved_easy').text(stats?.easy ?? 0);
@@ -186,9 +206,8 @@ const linkRepo = (token, name) => {
         $('#p_solved_hard').text(stats?.hard ?? 0);
       });
 
-    /* Hide accordingly */
     document.getElementById('hook_mode').style.display = 'none';
-    document.getElementById('commit_mode').style.display = 'inherit';
+    document.getElementById('commit_mode').style.display = 'block';
   });
 
   xhr.open('GET', AUTHENTICATION_URL, true);
@@ -198,21 +217,18 @@ const linkRepo = (token, name) => {
 };
 
 const unlinkRepo = () => {
-  /* Reset mode type to hook, stats to null */
   api.storage.local.set(
     { mode_type: 'hook', leetsync_hook: null, sync_stats: true, stats: null },
     () => {
       console.log(`Unlinked repo`);
       console.log('Cleared local stats');
+      updateHeaderStatus(false);
     }
   );
 
-  /* Hide accordingly */
-  document.getElementById('hook_mode').style.display = 'inherit';
+  document.getElementById('hook_mode').style.display = 'block';
   document.getElementById('commit_mode').style.display = 'none';
 };
-
-/* Check for value of select tag, Get Started disabled by default */
 
 $('#type').on('change', function () {
   const valueSelected = this.value;
@@ -224,11 +240,8 @@ $('#type').on('change', function () {
 });
 
 $('#hook_button').on('click', () => {
-  /* on click should generate: 1) option 2) repository name */
   if (!option()) {
-    $('#error').text(
-      'No option selected - Pick an option from dropdown menu below that best suits you!'
-    );
+    $('#error').text('No option selected - Pick an option from the dropdown menu!');
     $('#error').show();
   } else if (!repositoryName()) {
     $('#error').text('No repository name added - Enter the name of your repository!');
@@ -236,22 +249,14 @@ $('#hook_button').on('click', () => {
     $('#error').show();
   } else {
     $('#error').hide();
-    $('#success').text('Attempting to create Hook... Please wait.');
+    $('#success').text('Attempting to set up hook... Please wait.');
     $('#success').show();
 
-    /* 
-      Perform processing
-      - step 1: Check if current stage === hook.
-      - step 2: store repo name as repoName in chrome storage.
-      - step 3: if (1), POST request to repoName (iff option = create new repo) ; else display error message.
-      - step 4: if proceed from 3, hide hook_mode and display commit_mode (show stats e.g: files pushed/questions-solved/leaderboard)
-    */
     api.storage.local.get('leetsync_token', data => {
       const token = data.leetsync_token;
       if (token === null || token === undefined) {
-        /* Not authorized yet. */
         $('#error').text(
-          'Authorization error - Grant LeetSync access to your GitHub account to continue (launch extension to proceed)'
+          'Authorization error - Grant LeetSync access to your GitHub account in options to continue.'
         );
         $('#error').show();
         $('#success').hide();
@@ -261,14 +266,13 @@ $('#hook_button').on('click', () => {
         api.storage.local.get('leetsync_username', data2 => {
           const username = data2.leetsync_username;
           if (!username) {
-            /* Improper authorization. */
             $('#error').text(
-              'Improper Authorization error - Grant LeetSync access to your GitHub account to continue (launch extension to proceed)'
+              'Improper Authorization error - Grant LeetSync access to your GitHub account to continue.'
             );
             $('#error').show();
             $('#success').hide();
           } else {
-            linkRepo(token, `${username}/${repositoryName()}`, false);
+            linkRepo(token, `${username}/${repositoryName()}`);
           }
         });
       }
@@ -282,50 +286,40 @@ $('#unlink a').on('click', () => {
   $('#success').text('Successfully unlinked your current git repo. Please create/link a new hook.');
 });
 
-/* Detect mode type */
-api.storage.local.get('mode_type', data => {
+/* Detect mode type and initialize dashboard */
+api.storage.local.get(['mode_type', 'leetsync_hook', 'repo', 'leetsync_token'], data => {
   const mode = data.mode_type;
+  const token = data.leetsync_token;
 
   if (mode && mode === 'commit') {
-    /* Check if still access to repo */
-    api.storage.local.get('leetsync_token', data2 => {
-      const token = data2.leetsync_token;
-      if (token === null || token === undefined) {
-        /* Not authorized yet. */
+    if (!token) {
+      $('#error').text(
+        'Authorization error - Grant LeetSync access to your GitHub account in options to continue.'
+      );
+      $('#error').show();
+      $('#success').hide();
+      updateHeaderStatus(false);
+      document.getElementById('hook_mode').style.display = 'block';
+      document.getElementById('commit_mode').style.display = 'none';
+    } else {
+      const hook = data.leetsync_hook;
+      if (!hook) {
         $('#error').text(
-          'Authorization error - Grant LeetSync access to your GitHub account to continue (click LeetSync extension on the top right to proceed)'
+          'Improper Authorization error - Grant LeetSync access to your GitHub account in options to continue.'
         );
         $('#error').show();
         $('#success').hide();
-        /* Hide accordingly */
-        document.getElementById('hook_mode').style.display = 'inherit';
+        updateHeaderStatus(false);
+        document.getElementById('hook_mode').style.display = 'block';
         document.getElementById('commit_mode').style.display = 'none';
       } else {
-        /* Get access to repo */
-        api.storage.local.get('leetsync_hook', repoName => {
-          const hook = repoName.leetsync_hook;
-          if (!hook) {
-            /* Not authorized yet. */
-            $('#error').text(
-              'Improper Authorization error - Grant LeetSync access to your GitHub account to continue (click LeetSync extension on the top right to proceed)'
-            );
-            $('#error').show();
-            $('#success').hide();
-            /* Hide accordingly */
-            document.getElementById('hook_mode').style.display = 'inherit';
-            document.getElementById('commit_mode').style.display = 'none';
-          } else {
-            /* Username exists, at least in storage. Confirm this */
-            linkRepo(token, hook);
-          }
-        });
+        updateHeaderStatus(true, hook, data.repo);
+        linkRepo(token, hook);
       }
-    });
-
-    document.getElementById('hook_mode').style.display = 'none';
-    document.getElementById('commit_mode').style.display = 'inherit';
+    }
   } else {
-    document.getElementById('hook_mode').style.display = 'inherit';
+    updateHeaderStatus(false);
+    document.getElementById('hook_mode').style.display = 'block';
     document.getElementById('commit_mode').style.display = 'none';
   }
 });

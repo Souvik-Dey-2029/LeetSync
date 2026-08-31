@@ -1,6 +1,7 @@
 import { LeetCodeV1, LeetCodeV2 } from './versions.js';
 import setupManualSubmitBtn from './submitBtn.js';
 import {
+  addLeadingZeros,
   debounce,
   delay,
   DIFFICULTY,
@@ -8,6 +9,7 @@ import {
   getDifficulty,
   isEmptyObject,
   LeetSyncError,
+  matchesProblem,
   mergeStats,
 } from './util.js';
 import { appendProblemToReadme, sortTopicsInReadme } from './readmeTopics.js';
@@ -22,55 +24,39 @@ const defaultRepoReadme =
   'A collection of LeetCode questions to ace the coding interview! - Synced using LeetSync';
 const readmeFilename = 'README.md';
 const statsFilename = 'stats.json';
-
-// problem types
-const NORMAL_PROBLEM = 0;
-const EXPLORE_SECTION_PROBLEM = 1;
-
 const WAIT_FOR_GITHUB_API_TO_NOT_THROW_409_MS = 500;
 
 const api = getBrowser();
 
-/**
- * Constructs a file path by appending the given filename to the problem directory.
- * If no filename is provided, it returns the problem name as the path.
- *
- * @param {string} problem - The base problem directory or the entire file path if no filename is provided.
- * @param {string} [filename] - Optional parameter for the filename to be appended to the problem directory.
- * @returns {string} - Returns a string representing the complete file path, either with or without the appended filename.
- */
 const getPath = (problem, filename) => {
   return filename ? `${problem}/${filename}` : problem;
 };
 
-// https://web.archive.org/web/20190623091645/https://monsur.hossa.in/2012/07/20/utf-8-in-javascript.html
-// In order to preserve mutation of the data, we have to encode it, which is usually done in base64.
-// But btoa only accepts ASCII 7 bit chars (0-127) while Javascript uses 16-bit minimum chars (0-65535).
-// EncodeURIComponent converts the Unicode Points UTF-8 bits to hex UTF-8.
-// Unescape converts percent-encoded hex values into regular ASCII (optional; it shrinks string size).
-// btoa converts ASCII to base64.
 /** Decodes a base64 encoded string into UTF-8 format using URI encoding.*/
 const decode = data => decodeURIComponent(escape(atob(data)));
 /** Encodes a given string into base64 format.*/
 const encode = data => btoa(unescape(encodeURIComponent(data)));
 
-/**
- * Uploads content to a specified GitHub repository and updates local stats with the sha of the updated file.
- * @async
- * @param {string} token - The authentication token used to authorize the request.
- * @param {string} hook - The owner and repository name in the format 'owner/repo'.
- * @param {string} content - The content to be uploaded, typically a string encoded in base64.
- * @param {string} problem - The problem slug, which is a combination of problem ID and name, and acts as a folder.
- * @param {string} filename - The name of the file, typically the problem slug + file extension.
- * @param {string} sha - The SHA of the existing file.
- * @param {string} message - A commit message describing the change.
- * @param {string} [difficulty] - The difficulty level of the problem.
- *
- * @returns {Promise<string>} - A promise that resolves with the new SHA of the content after successful upload.
- *
- * @throws {LeetSyncError} - Throws an error if the response is not OK (e.g., HTTP status code is not `200-299`).
- */
-const upload = async (token, hook, content, problem, filename, sha, message) => {
+function getAndInitializeStats(problem) {
+  return api.storage.local.get('stats').then(({ stats }) => {
+    if (stats == null || isEmptyObject(stats)) {
+      stats = {};
+      stats.shas = {};
+      stats.solved = 0;
+      stats.easy = 0;
+      stats.medium = 0;
+      stats.hard = 0;
+    }
+
+    if (stats.shas[problem] == null) {
+      stats.shas[problem] = {};
+    }
+
+    return stats;
+  });
+}
+
+async function upload(token, hook, content, problem, filename, sha, message) {
   const path = getPath(problem, filename);
   const URL = `https://api.github.com/repos/${hook}/contents/${path}`;
 
@@ -96,41 +82,14 @@ const upload = async (token, hook, content, problem, filename, sha, message) => 
   console.log(`Successfully committed ${getPath(problem, filename)} to github`);
 
   const body = await res.json();
-  //TODO: Think, should we be setting stats state here?
   const stats = await getAndInitializeStats(problem);
   stats.shas[problem][filename] = body.content.sha;
   api.storage.local.set({ stats });
 
   return body.content.sha;
-};
+}
 
-// Returns stats object. If it didn't exist, initializes stats with default difficulty values and initializes the sha object for problem
-const getAndInitializeStats = problem => {
-  return api.storage.local.get('stats').then(({ stats }) => {
-    if (stats == null || isEmptyObject(stats)) {
-      stats = {};
-      stats.shas = {};
-      stats.solved = 0;
-      stats.easy = 0;
-      stats.medium = 0;
-      stats.hard = 0;
-    }
-
-    if (stats.shas[problem] == null) {
-      stats.shas[problem] = {};
-    }
-
-    return stats;
-  });
-};
-
-/**
- * Increment the statistics for a given problem based on its difficulty.
- * @param {DIFFICULTY} difficulty - The difficulty level of the problem, which can be `easy`, `medium`, or `hard`.
- * @param {string} problem - The slug problem name, e.g. `0001-two-sum`
- * @returns {Promise<Object>} A promise that resolves to the updated statistics object.
- */
-const incrementStats = (difficulty, problem) => {
+function incrementStats(difficulty, problem) {
   const diff = getDifficulty(difficulty);
   return api.storage.local.get('stats').then(({ stats }) => {
     stats.solved += 1;
@@ -141,17 +100,9 @@ const incrementStats = (difficulty, problem) => {
     api.storage.local.set({ stats });
     return stats;
   });
-};
+}
 
-/**
- * Sets persistent stats and merges any cloud updates into local stats
- * @async
- * @param {Object} localStats - Local statistics about LeetCode problems.
- * @returns {Promise<void>} A promise that resolves to the sha of the newly updated `stats.json` file.
- *
- * @throws {Error} - If the upload operation fails for any reason other than 409 Conflict
- */
-const setPersistentStats = async localStats => {
+async function setPersistentStats(localStats) {
   let pStats = { leetcode: localStats };
   const pStatsEncoded = encode(JSON.stringify(pStats));
   const sha = localStats?.shas?.[readmeFilename]?.[''] || '';
@@ -165,7 +116,6 @@ const setPersistentStats = async localStats => {
     return await upload(token, hook, pStatsEncoded, statsFilename, '', sha, updateStatsMsg);
   } catch (e) {
     if (e.message === '409') {
-      // Stats were updated on GitHub since last submission
       const { content, sha } = await getGitHubFile(token, hook, statsFilename).then(res =>
         res.json()
       );
@@ -173,7 +123,6 @@ const setPersistentStats = async localStats => {
       const mergedStats = mergeStats(pStats.leetcode, localStats);
       const mergedStatsEncoded = encode(JSON.stringify({ leetcode: mergedStats }));
 
-      // Update local stats with the changes from GitHub
       await api.storage.local.set({ stats: mergedStats });
 
       return await delay(
@@ -183,19 +132,90 @@ const setPersistentStats = async localStats => {
     }
     throw e;
   }
-};
+}
 
-const isCompleted = problemName => {
-  return api.storage.local.get('stats').then(data => {
-    if (data?.stats?.shas?.[problemName] == null) return false;
+const inFlightUploads = new Set();
 
-    for (let file of Object.keys(data?.stats?.shas?.[problemName])) {
-      if (file.includes(problemName)) return true;
+const isCompleted = async (problemName, numericId, slug) => {
+  const data = await api.storage.local.get('stats');
+  const stats = data?.stats;
+
+  if (stats?.shas) {
+    for (const dirName of Object.keys(stats.shas)) {
+      if (matchesProblem(dirName, problemName, numericId, slug)) {
+        return true;
+      }
+    }
+  }
+
+  try {
+    const { leetsync_token: token, leetsync_hook: hook } = await api.storage.local.get([
+      'leetsync_token',
+      'leetsync_hook',
+    ]);
+
+    if (!token || !hook) {
+      return false;
     }
 
-    return false;
-  });
+    let remoteExists = false;
+    try {
+      const res = await getGitHubFile(token, hook, problemName);
+      if (res && res.ok) {
+        remoteExists = true;
+      }
+    } catch (e) {
+      // 404 means exact problemName folder does not exist
+    }
+
+    if (!remoteExists && (numericId || slug)) {
+      const fallbackName = `${addLeadingZeros(String(numericId || ''))}-${slug || ''}`;
+      if (fallbackName !== problemName) {
+        try {
+          const res = await getGitHubFile(token, hook, fallbackName);
+          if (res && res.ok) {
+            remoteExists = true;
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (!remoteExists) {
+      try {
+        const res = await getGitHubFile(token, hook, statsFilename);
+        if (res && res.ok) {
+          const jsonRes = await res.json();
+          const pStats = JSON.parse(decode(jsonRes.content));
+          const remoteShas = pStats?.leetcode?.shas || {};
+          for (const dirName of Object.keys(remoteShas)) {
+            if (matchesProblem(dirName, problemName, numericId, slug)) {
+              remoteExists = true;
+              break;
+            }
+          }
+          if (pStats?.leetcode) {
+            const mergedStats = mergeStats(pStats.leetcode, stats || {});
+            await api.storage.local.set({ stats: mergedStats });
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (remoteExists) {
+      const updatedStats = await getAndInitializeStats(problemName);
+      if (!updatedStats.shas[problemName]['README.md']) {
+        updatedStats.shas[problemName]['README.md'] = 'synced';
+        await api.storage.local.set({ stats: updatedStats });
+      }
+      return true;
+    }
+  } catch (err) {
+    console.error('Remote duplicate check failed:', err);
+  }
+
+  return false;
 };
+
 
 /* Discussion posts prepended at top of README */
 /* Future implementations may require appending to bottom of file */
@@ -334,35 +354,37 @@ async function getGitHubFile(token, hook, directory, filename) {
 }
 
 /* Discussion Link - When a user makes a new post, the link is prepended to the README for that problem.*/
-document.addEventListener('click', event => {
-  const element = event.target;
-  const oldPath = window.location.pathname;
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', event => {
+    const element = event.target;
+    const oldPath = window.location.pathname;
 
-  /* Act on Post button click */
-  /* Complex since "New" button shares many of the same properties as "Post button */
-  if (
-    element &&
-    (element.classList.contains('icon__3Su4') ||
-      element.parentElement?.classList.contains('icon__3Su4') ||
-      element.parentElement?.classList.contains('btn-content-container__214G') ||
-      element.parentElement?.classList.contains('header-right__2UzF'))
-  ) {
-    setTimeout(function () {
-      /* Only post if post button was clicked and url changed */
-      if (
-        oldPath !== window.location.pathname &&
-        oldPath === window.location.pathname.substring(0, oldPath.length) &&
-        !Number.isNaN(window.location.pathname.charAt(oldPath.length))
-      ) {
-        const date = new Date();
-        const currentDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()} at ${date.getHours()}:${date.getMinutes()}`;
-        const addition = `[Discussion Post (created on ${currentDate})](${window.location})  \n`;
-        const problemName = window.location.pathname.split('/')[2]; // must be true.
-        updateReadmeWithDiscussionPost(addition, problemName, readmeFilename, discussionMsg, true);
-      }
-    }, 1000);
-  }
-});
+    /* Act on Post button click */
+    /* Complex since "New" button shares many of the same properties as "Post button */
+    if (
+      element &&
+      (element.classList.contains('icon__3Su4') ||
+        element.parentElement?.classList.contains('icon__3Su4') ||
+        element.parentElement?.classList.contains('btn-content-container__214G') ||
+        element.parentElement?.classList.contains('header-right__2UzF'))
+    ) {
+      setTimeout(function () {
+        /* Only post if post button was clicked and url changed */
+        if (
+          oldPath !== window.location.pathname &&
+          oldPath === window.location.pathname.substring(0, oldPath.length) &&
+          !Number.isNaN(window.location.pathname.charAt(oldPath.length))
+        ) {
+          const date = new Date();
+          const currentDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()} at ${date.getHours()}:${date.getMinutes()}`;
+          const addition = `[Discussion Post (created on ${currentDate})](${window.location})  \n`;
+          const problemName = window.location.pathname.split('/')[2]; // must be true.
+          updateReadmeWithDiscussionPost(addition, problemName, readmeFilename, discussionMsg, true);
+        }
+      }, 1000);
+    }
+  });
+}
 
 function createRepoReadme() {
   const content = encode(defaultRepoReadme);
@@ -445,51 +467,74 @@ function loader(leetCode) {
       }
 
       const problemName = leetCode.getProblemNameSlug();
-      const alreadyCompleted = await isCompleted(problemName);
-      const language = leetCode.getLanguageExtension();
-      if (!language) {
-        throw new LeetSyncError('LanguageNotFound');
+      const numericId = leetCode.getProblemId ? leetCode.getProblemId() : null;
+      const titleSlug = leetCode.getProblemSlug ? leetCode.getProblemSlug() : null;
+
+      const alreadyCompleted = await isCompleted(problemName, numericId, titleSlug);
+      if (alreadyCompleted) {
+        console.log(`LeetSync: Problem ${problemName} is already synchronized.`);
+        leetCode.markAlreadySynced(
+          'Already synced — this LeetCode problem is already in your GitHub repository.'
+        );
+        return;
       }
-      const filename = problemName + language;
 
-      /* Upload README */
-      const uploadReadMe = await api.storage.local.get('stats').then(({ stats }) => {
-        const shaExists = stats?.shas?.[problemName]?.[readmeFilename] !== undefined;
+      if (inFlightUploads.has(problemName)) {
+        console.log(`LeetSync: Upload for ${problemName} is already in flight.`);
+        leetCode.markAlreadySynced(
+          'Already synced — this LeetCode problem is already in your GitHub repository.'
+        );
+        return;
+      }
 
-        if (!shaExists) {
-          return uploadGitWith409Retry(
-            encode(probStatement),
-            problemName,
-            readmeFilename,
-            readmeMsg
-          );
+      inFlightUploads.add(problemName);
+
+      try {
+        const language = leetCode.getLanguageExtension();
+        if (!language) {
+          throw new LeetSyncError('LanguageNotFound');
         }
-      });
+        const filename = problemName + language;
 
-      /* Upload Notes if any*/
-      const notes = leetCode.getNotesIfAny();
-      let uploadNotes;
-      if (notes != undefined && notes.length > 0) {
-        uploadNotes = uploadGitWith409Retry(encode(notes), problemName, 'NOTES.md', createNotesMsg);
-      }
+        /* Upload README */
+        const uploadReadMe = await api.storage.local.get('stats').then(({ stats }) => {
+          const shaExists = stats?.shas?.[problemName]?.[readmeFilename] !== undefined;
 
-      /* Upload code to Git */
-      const code = leetCode.findCode(probStats);
-      const uploadCode = uploadGitWith409Retry(encode(code), problemName, filename, probStats);
+          if (!shaExists) {
+            return uploadGitWith409Retry(
+              encode(probStatement),
+              problemName,
+              readmeFilename,
+              readmeMsg
+            );
+          }
+        });
 
-      /* Group problem into its relevant topics */
-      const updateRepoReadMe = updateReadmeTopicTagsWithProblem(
-        leetCode.submissionData?.question?.topicTags,
-        problemName
-      );
+        /* Upload Notes if any*/
+        const notes = leetCode.getNotesIfAny();
+        let uploadNotes;
+        if (notes != undefined && notes.length > 0) {
+          uploadNotes = uploadGitWith409Retry(encode(notes), problemName, 'NOTES.md', createNotesMsg);
+        }
 
-      const newSHAs = await Promise.all([uploadReadMe, uploadNotes, uploadCode, updateRepoReadMe]);
+        /* Upload code to Git */
+        const code = leetCode.findCode(probStats);
+        const uploadCode = uploadGitWith409Retry(encode(code), problemName, filename, probStats);
 
-      leetCode.markUploaded();
+        /* Group problem into its relevant topics */
+        const updateRepoReadMe = updateReadmeTopicTagsWithProblem(
+          leetCode.submissionData?.question?.topicTags,
+          problemName
+        );
 
-      if (!alreadyCompleted) {
+        await Promise.all([uploadReadMe, uploadNotes, uploadCode, updateRepoReadMe]);
+
+        leetCode.markUploaded();
+
         // Increments local and persistent stats
-        incrementStats(leetCode.difficulty, problemName).then(setPersistentStats);
+        await incrementStats(leetCode.difficulty, problemName).then(setPersistentStats);
+      } finally {
+        inFlightUploads.delete(problemName);
       }
     } catch (err) {
       leetCode.markUploadFailed();
@@ -556,40 +601,45 @@ async function v2SubmissionHandler(event, leetCode) {
 }
 
 // Use MutationObserver to determine when the submit button elements are loaded
-const submitBtnObserver = new MutationObserver(function (_mutations, observer) {
-  const v1SubmitBtn = document.querySelector('[data-cy="submit-code-btn"]');
-  const v2SubmitBtn = document.querySelector('[data-e2e-locator="console-submit-button"]');
-  const textareaList = document.getElementsByTagName('textarea');
-  const textarea =
-    textareaList.length === 4
-      ? textareaList[2]
-      : textareaList.length === 2
-      ? textareaList[0]
-      : textareaList[1];
+const submitBtnObserver =
+  typeof MutationObserver !== 'undefined'
+    ? new MutationObserver(function (_mutations, observer) {
+        const v1SubmitBtn = document.querySelector('[data-cy="submit-code-btn"]');
+        const v2SubmitBtn = document.querySelector('[data-e2e-locator="console-submit-button"]');
+        const textareaList = document.getElementsByTagName('textarea');
+        const textarea =
+          textareaList.length === 4
+            ? textareaList[2]
+            : textareaList.length === 2
+            ? textareaList[0]
+            : textareaList[1];
 
-  if (v1SubmitBtn) {
-    observer.disconnect();
+        if (v1SubmitBtn) {
+          observer.disconnect();
 
-    const leetCode = new LeetCodeV1();
-    v1SubmitBtn.addEventListener('click', () => loader(leetCode));
-    return;
-  }
+          const leetCode = new LeetCodeV1();
+          v1SubmitBtn.addEventListener('click', () => loader(leetCode));
+          return;
+        }
 
-  if (v2SubmitBtn && textarea) {
-    observer.disconnect();
+        if (v2SubmitBtn && textarea) {
+          observer.disconnect();
 
-    const leetCode = new LeetCodeV2();
-    if (!!!v2SubmitBtn.onclick) {
-      textarea.addEventListener('keydown', e => v2SubmissionHandler(e, leetCode));
-      v2SubmitBtn.onclick = e => v2SubmissionHandler(e, leetCode);
-    }
-  }
-});
+          const leetCode = new LeetCodeV2();
+          if (!!!v2SubmitBtn.onclick) {
+            textarea.addEventListener('keydown', e => v2SubmissionHandler(e, leetCode));
+            v2SubmitBtn.onclick = e => v2SubmissionHandler(e, leetCode);
+          }
+        }
+      })
+    : null;
 
-submitBtnObserver.observe(document.body, {
-  childList: true,
-  subtree: true,
-});
+if (typeof document !== 'undefined' && document.body && submitBtnObserver) {
+  submitBtnObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+}
 
 /* Sync to local storage */
 api.storage.local.get('isSync', data => {
@@ -635,3 +685,6 @@ class LeetSyncNetworkError extends LeetSyncError {
     this.status = response.status;
   }
 }
+
+export { isCompleted };
+

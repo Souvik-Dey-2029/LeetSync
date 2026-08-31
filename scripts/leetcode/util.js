@@ -103,9 +103,40 @@ function getBrowser() {
     return chrome;
   } else if (typeof browser !== 'undefined' && typeof browser.runtime !== 'undefined') {
     return browser;
-  } else {
-    throw new LeetSyncError('BrowserNotSupported');
   }
+  return new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        if (typeof globalThis !== 'undefined' && globalThis.chrome && globalThis.chrome[prop]) {
+          return globalThis.chrome[prop];
+        }
+        if (prop === 'storage') {
+          return {
+            local: {
+              get: (...args) =>
+                globalThis.chrome?.storage?.local?.get
+                  ? globalThis.chrome.storage.local.get(...args)
+                  : Promise.resolve({}),
+              set: (...args) =>
+                globalThis.chrome?.storage?.local?.set
+                  ? globalThis.chrome.storage.local.set(...args)
+                  : Promise.resolve(),
+            },
+          };
+        }
+        if (prop === 'runtime') {
+          return {
+            sendMessage: (...args) =>
+              globalThis.chrome?.runtime?.sendMessage
+                ? globalThis.chrome.runtime.sendMessage(...args)
+                : Promise.resolve({}),
+          };
+        }
+        return undefined;
+      },
+    }
+  );
 }
 
 /**
@@ -207,6 +238,28 @@ function mergeStats(obj1, obj2) {
   return merged;
 }
 
+function matchesProblem(dirName, problemName, numericId, slug) {
+  if (!dirName) return false;
+  if (problemName && dirName === problemName) return true;
+
+  if (numericId != null && numericId !== '') {
+    const numStr = String(numericId).trim();
+    const padded = addLeadingZeros(numStr);
+    if (dirName === padded || dirName.startsWith(`${padded}-`) || dirName.startsWith(`${numStr}-`)) {
+      return true;
+    }
+  }
+
+  if (slug && slug.trim() !== '') {
+    const cleanSlug = slug.trim().toLowerCase();
+    if (dirName.toLowerCase() === cleanSlug || dirName.toLowerCase().endsWith(`-${cleanSlug}`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export {
   addLeadingZeros,
   assert,
@@ -221,5 +274,7 @@ export {
   isEmptyObject,
   languages,
   LeetSyncError,
+  matchesProblem,
   mergeStats,
 };
+

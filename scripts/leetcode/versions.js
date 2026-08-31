@@ -539,6 +539,43 @@ LeetCodeV2.prototype.insertToAnchorElement = function (elem) {
     target.appendChild(elem);
   }
 };
+LeetCodeV1.prototype.getProblemId = function () {
+  const slug = this.getProblemNameSlug();
+  const match = slug.match(/^(\d+)-/);
+  return match ? match[1] : null;
+};
+LeetCodeV1.prototype.getProblemSlug = function () {
+  const slug = this.getProblemNameSlug();
+  const parts = slug.split('-');
+  if (parts.length > 1 && /^\d+$/.test(parts[0])) {
+    return parts.slice(1).join('-');
+  }
+  return slug;
+};
+LeetCodeV1.prototype.markAlreadySynced = function (
+  msg = 'Already synced — this LeetCode problem is already in your GitHub repository.'
+) {
+  let elem = document.getElementById(this.progressSpinnerElementId);
+  if (elem) {
+    elem.className = '';
+    elem.style =
+      'display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #2185d0; font-weight: 500; margin-left: 8px;';
+    elem.innerHTML = `<span style="display:inline-block;transform:rotate(45deg);height:14px;width:7px;border-bottom:3px solid #2185d0;border-right:3px solid #2185d0;margin-right:6px;"></span><span>${msg}</span>`;
+  }
+};
+
+LeetCodeV2.prototype.getProblemId = function () {
+  if (this.submissionData?.question) {
+    return this.submissionData.question.questionFrontendId || this.submissionData.question.questionId;
+  }
+  return null;
+};
+LeetCodeV2.prototype.getProblemSlug = function () {
+  if (this.submissionData?.question) {
+    return this.submissionData.question.titleSlug;
+  }
+  return null;
+};
 LeetCodeV2.prototype.markUploaded = function () {
   let elem = document.getElementById(this.progressSpinnerElementId);
   if (elem) {
@@ -555,5 +592,17 @@ LeetCodeV2.prototype.markUploadFailed = function () {
       'display: inline-block;transform: rotate(45deg);height:24px;width:12px;border-bottom:7px solid red;border-right:7px solid red;';
   }
 };
+LeetCodeV2.prototype.markAlreadySynced = function (
+  msg = 'Already synced — this LeetCode problem is already in your GitHub repository.'
+) {
+  let elem = document.getElementById(this.progressSpinnerElementId);
+  if (elem) {
+    elem.className = '';
+    elem.style =
+      'display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #2185d0; font-weight: 500; margin-left: 8px;';
+    elem.innerHTML = `<span style="display:inline-block;transform:rotate(45deg);height:14px;width:7px;border-bottom:3px solid #2185d0;border-right:3px solid #2185d0;margin-right:6px;"></span><span>${msg}</span>`;
+  }
+};
 
 export { LeetCodeV1, LeetCodeV2 };
+

@@ -61,6 +61,9 @@ function addManualSubmitBtn(eventHandler) {
 }
 
 function setupManualSubmitBtn(submitBtnHandler) {
+  if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
   // Detect when submissionPageBtns load.
   const submissionPageBtnsObserver = new MutationObserver((_, observer) => {
     const url = window.location.href;

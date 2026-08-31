@@ -9,51 +9,97 @@
   </head>
 
   <body>
-    <!-- SIDE DECORATIVE DEVELOPER MOTIFS -->
-    <div class="side-decorations left-decorations">
-      <div class="floating-motif motif-bracket" data-parallax="-0.04">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+    <!-- WORKSPACE BLUEPRINT BACKGROUND PATTERNS -->
+    <div class="bg-blueprint-pattern">
+      <div class="blueprint-dot grid-dots-left"></div>
+      <div class="blueprint-dot grid-dots-right"></div>
+    </div>
+
+    <!-- LEFT SIDE DECORATIVE SYSTEM -->
+    <aside class="side-decorations left-decorations" aria-hidden="true">
+      <div class="floating-motif motif-code-angle" data-parallax="-0.03">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <polyline points="16 18 22 12 16 6"></polyline>
           <polyline points="8 6 2 12 8 18"></polyline>
         </svg>
       </div>
-      <div class="floating-motif motif-cube" data-parallax="-0.06">
-        <div class="css-cube">
-          <div class="cube-face cube-front"></div>
-          <div class="cube-face cube-top"></div>
-          <div class="cube-face cube-side"></div>
+
+      <!-- 3D LEETCODE STYLIZED OBJECT PLATFORM -->
+      <div class="decorative-3d-object left-object" data-parallax="-0.05">
+        <div class="leetcode-3d-platform">
+          <div class="platform-base"></div>
+          <div class="platform-tier"></div>
+          <div class="platform-symbol">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#111111" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="#FF7A00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="#FF7A00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
         </div>
       </div>
-      <div class="floating-motif motif-code" data-parallax="-0.03">
-        <span>{ }</span>
-      </div>
-    </div>
 
-    <div class="side-decorations right-decorations">
-      <div class="floating-motif motif-github" data-parallax="0.04">
-        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+      <!-- CODE CUBE -->
+      <div class="floating-motif motif-cube-left" data-parallax="-0.07">
+        <div class="css-3d-cube">
+          <div class="cube-face front">&lt;/&gt;</div>
+          <div class="cube-face top"></div>
+          <div class="cube-face side"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT SIDE DECORATIVE SYSTEM -->
+    <aside class="side-decorations right-decorations" aria-hidden="true">
+      <div class="floating-motif motif-repo-folders" data-parallax="0.03">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="1.5">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <path d="M12 11v6m-3-3h6"></path>
         </svg>
       </div>
-      <div class="floating-motif motif-cube-small" data-parallax="0.07">
-        <div class="css-cube cube-sm">
-          <div class="cube-face cube-front"></div>
-          <div class="cube-face cube-top"></div>
-          <div class="cube-face cube-side"></div>
+
+      <!-- 3D GITHUB OCTOCAT PEDESTAL -->
+      <div class="decorative-3d-object right-object" data-parallax="0.05">
+        <div class="octocat-3d-pedestal">
+          <div class="pedestal-top">
+            <svg class="octocat-silhouette" width="56" height="56" viewBox="0 0 24 24" fill="#18181B">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+          </div>
+          <div class="pedestal-tier"></div>
+          <div class="pedestal-base"></div>
         </div>
       </div>
-      <div class="floating-motif motif-binary" data-parallax="0.03">
+
+      <!-- GIT BRANCH CUBE -->
+      <div class="floating-motif motif-cube-right" data-parallax="0.07">
+        <div class="css-3d-cube git-cube">
+          <div class="cube-face front">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF7A00" stroke-width="2.5">
+              <line x1="6" y1="3" x2="6" y2="15"></line>
+              <circle cx="18" cy="6" r="3"></circle>
+              <circle cx="6" cy="18" r="3"></circle>
+              <path d="M18 9a9 9 0 0 1-9 9"></path>
+            </svg>
+          </div>
+          <div class="cube-face top"></div>
+          <div class="cube-face side"></div>
+        </div>
+      </div>
+
+      <!-- GLOW SPHERE METRIC -->
+      <div class="floating-motif motif-sphere" data-parallax="0.04">
         <span>01</span>
       </div>
-    </div>
+    </aside>
 
-    <!-- MAIN DASHBOARD CONTAINER -->
-    <div class="app-container">
+    <!-- MAIN APPLICATION WORKSPACE -->
+    <div class="app-workspace">
       <!-- HEADER -->
       <header class="app-header">
         <div class="brand-container" id="brand_logo_card">
           <div class="logo-icon-3d">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#FF7A00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M2 17L12 22L22 17" stroke="#FF7A00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M2 12L12 17L22 12" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -79,16 +125,44 @@
 
       <!-- NOTIFICATION MESSAGES -->
       <div id="error" class="alert alert-error" style="display:none;"></div>
-      <div id="success" class="alert alert-success" style="display:none;"></div>
+      <div id="success" class="alert alert-success" style="display:none;">
+        <svg class="alert-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span class="alert-text">Successfully linked <a target="_blank" href="#" id="success_repo_link">repository</a> to LeetSync.</span>
+      </div>
 
       <!-- HERO SECTION -->
       <section class="hero-section">
-        <div class="hero-content">
-          <span class="hero-tag">LEETSYNC WORKFLOW</span>
+        <div class="hero-left">
+          <span class="hero-tag">⚡ LEETSYNC WORKFLOW</span>
           <h1 class="hero-title">Automated LeetCode <span class="arrow">→</span> GitHub Workflow</h1>
           <p class="hero-desc">
             Keep every accepted solution organized in your own GitHub repository.
           </p>
+        </div>
+
+        <div class="hero-right-diagram">
+          <div class="node node-leetcode">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#FF7A00" stroke-width="2" stroke-linecap="round"/>
+              <path d="M2 17L12 22L22 17" stroke="#FF7A00" stroke-width="2" stroke-linecap="round"/>
+              <path d="M2 12L12 17L22 12" stroke="#111111" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="diagram-line">
+            <div class="check-circle">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="node node-github">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#FFFFFF">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+          </div>
         </div>
       </section>
 
@@ -142,7 +216,7 @@
             <div class="stat-top">
               <span class="stat-label">TOTAL</span>
               <div class="stat-icon-bg total-bg">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                 </svg>
               </div>
@@ -157,7 +231,7 @@
             <div class="stat-top">
               <span class="stat-label label-easy">EASY</span>
               <div class="stat-icon-bg easy-bg">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
@@ -173,7 +247,7 @@
             <div class="stat-top">
               <span class="stat-label label-medium">MEDIUM</span>
               <div class="stat-icon-bg medium-bg">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"></circle>
                   <line x1="12" y1="8" x2="12" y2="12"></line>
                   <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -190,7 +264,7 @@
             <div class="stat-top">
               <span class="stat-label label-hard">HARD</span>
               <div class="stat-icon-bg hard-bg">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
               </div>
@@ -237,7 +311,7 @@
         </section>
       </div>
 
-      <!-- FEATURES / CAPABILITIES SECTION -->
+      <!-- CAPABILITIES SECTION -->
       <section class="features-section">
         <h2 class="section-heading">Capabilities</h2>
         <div class="features-grid">

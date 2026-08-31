@@ -12,18 +12,29 @@ try {
   }
 } catch (e) {}
 
-// Subtle 3D parallax effect for developer side motifs
-document.addEventListener('mousemove', e => {
-  const mouseX = e.clientX / window.innerWidth - 0.5;
-  const mouseY = e.clientY / window.innerHeight - 0.5;
+// Parallax cursor movement for side developer objects
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  document.querySelectorAll('.floating-motif').forEach(el => {
-    const factor = parseFloat(el.getAttribute('data-parallax') || '0.03');
-    const moveX = mouseX * 80 * factor;
-    const moveY = mouseY * 80 * factor;
-    el.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+if (!prefersReducedMotion) {
+  document.addEventListener('mousemove', e => {
+    const mouseX = e.clientX / window.innerWidth - 0.5;
+    const mouseY = e.clientY / window.innerHeight - 0.5;
+
+    document.querySelectorAll('.left-decorations .floating-motif, .left-decorations .decorative-3d-object').forEach(el => {
+      const factor = parseFloat(el.getAttribute('data-parallax') || '0.04');
+      const moveX = mouseX * 90 * factor;
+      const moveY = mouseY * 90 * factor;
+      el.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+    });
+
+    document.querySelectorAll('.right-decorations .floating-motif, .right-decorations .decorative-3d-object').forEach(el => {
+      const factor = parseFloat(el.getAttribute('data-parallax') || '0.04');
+      const moveX = -mouseX * 90 * factor; // Shift in opposite direction
+      const moveY = -mouseY * 90 * factor;
+      el.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+    });
   });
-});
+}
 
 const updateHeaderStatus = (isConnected, repoName, repoUrl) => {
   if (isConnected) {
@@ -144,7 +155,7 @@ const createRepo = async (token, name) => {
   await api.storage.local.remove('stats');
   $('#error').hide();
   $('#success').html(
-    `Successfully created <a target="blank" href="${res.html_url}">${name}</a>. Start <a href="http://leetcode.com">LeetCoding</a>!`
+    `Successfully created <a target="_blank" href="${res.html_url}">${name}</a> to LeetSync. Start <a href="https://leetcode.com" target="_blank">LeetCoding</a> now!`
   );
   $('#success').show();
   $('#unlink').show();
@@ -157,9 +168,9 @@ const createRepo = async (token, name) => {
 
 const getLinkErrorString = (statusCode, name) => {
   const errorStrings = {
-    301: `Error linking <a target="blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> This repository has been moved permanently. Try creating a new one.`,
-    403: `Error linking <a target="blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> Forbidden action. Please make sure you have write access to this repository.`,
-    404: `Error linking <a target="blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> Resource not found. Make sure you enter the correct repository name.`,
+    301: `Error linking <a target="_blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> This repository has been moved permanently. Try creating a new one.`,
+    403: `Error linking <a target="_blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> Forbidden action. Please make sure you have write access to this repository.`,
+    404: `Error linking <a target="_blank" href="https://github.com/${name}">${name}</a> to LeetSync. <br> Resource not found. Make sure you enter the correct repository name.`,
   };
   return errorStrings[statusCode] || `Error linking ${name} (Status code: ${statusCode})`;
 };
@@ -198,7 +209,7 @@ const linkRepo = (token, name) => {
       () => {
         $('#error').hide();
         $('#success').html(
-          `Successfully linked <a target="blank" href="${res.html_url}">${name}</a> to LeetSync. Start <a href="http://leetcode.com">LeetCoding</a> now!`
+          `Successfully linked <a target="_blank" href="${res.html_url}">${name}</a> to LeetSync. Start <a href="https://leetcode.com" target="_blank">LeetCoding</a> now!`
         );
         $('#success').show();
         $('#unlink').show();

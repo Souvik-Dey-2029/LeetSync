@@ -2,6 +2,7 @@
   <a href="https://standardjs.com"><img src="assets/octocode.png" alt="LeetSync - Automatically sync your code to your own GitHub repository." width="400"></a>
 </h1>
 
+
 <h1 align="center">
   <br>
   <strong>LeetSync</strong>

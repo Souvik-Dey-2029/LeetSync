@@ -87,6 +87,14 @@ async function upload(token, hook, content, problem, filename, sha, message) {
 
   const res = await fetch(URL, options);
   if (!res.ok) {
+    if (res.status === 401) {
+      await api.storage.local.set({
+        leetsync_token: null,
+        leetsync_username: null,
+        mode_type: 'hook',
+        leetsync_hook: null,
+      });
+    }
     throw new LeetSyncError(res.status, { cause: res });
   }
   console.log(`Successfully committed ${getPath(problem, filename)} to github`);
@@ -213,7 +221,7 @@ const findExistingProblemPath = async (language, problemName, numericId, slug) =
         if (res && res.ok) {
           return candidatePath;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const legacyCandidates = [];
@@ -231,7 +239,7 @@ const findExistingProblemPath = async (language, problemName, numericId, slug) =
             return legacyPath;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     try {
@@ -265,7 +273,7 @@ const findExistingProblemPath = async (language, problemName, numericId, slug) =
           }
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   } catch (err) {
     console.error('Remote existing check failed:', err);
   }
@@ -308,7 +316,7 @@ async function determineNextSolutionFilename(dirPath, language, action, statsSha
           });
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   let approachNum = 1;
@@ -379,8 +387,8 @@ async function uploadGitWith409Retry(code, problemName, filename, commitMsg, opt
   const sha = optionals?.sha
     ? optionals.sha
     : storageData.stats?.shas?.[problemName]?.[filename] !== undefined
-    ? storageData.stats.shas[problemName][filename]
-    : '';
+      ? storageData.stats.shas[problemName][filename]
+      : '';
 
   try {
     return await upload(
@@ -425,6 +433,14 @@ async function getGitHubFile(token, hook, directory, filename) {
 
   const res = await fetch(URL, options);
   if (!res.ok) {
+    if (res.status === 401) {
+      await api.storage.local.set({
+        leetsync_token: null,
+        leetsync_username: null,
+        mode_type: 'hook',
+        leetsync_hook: null,
+      });
+    }
     throw new Error(res.status);
   }
 
@@ -700,39 +716,39 @@ async function v2SubmissionHandler(event, leetCode) {
 const submitBtnObserver =
   typeof MutationObserver !== 'undefined'
     ? new MutationObserver(function (_mutations, observer) {
-        const v1SubmitBtn = document.querySelector('[data-cy="submit-code-btn"]');
-        const v2SubmitBtn = document.querySelector('[data-e2e-locator="console-submit-button"]');
-        const textareaList = document.getElementsByTagName('textarea');
-        const textarea =
-          textareaList.length === 4
-            ? textareaList[2]
-            : textareaList.length === 2
+      const v1SubmitBtn = document.querySelector('[data-cy="submit-code-btn"]');
+      const v2SubmitBtn = document.querySelector('[data-e2e-locator="console-submit-button"]');
+      const textareaList = document.getElementsByTagName('textarea');
+      const textarea =
+        textareaList.length === 4
+          ? textareaList[2]
+          : textareaList.length === 2
             ? textareaList[0]
             : textareaList[1];
 
-        if (v1SubmitBtn) {
-          observer.disconnect();
+      if (v1SubmitBtn) {
+        observer.disconnect();
 
-          const leetCode = new LeetCodeV1();
-          v1SubmitBtn.addEventListener('click', async () => {
-            const shouldSync = await showSyncConfirmationModal();
-            if (shouldSync) {
-              loader(leetCode);
-            }
-          });
-          return;
-        }
-
-        if (v2SubmitBtn && textarea) {
-          observer.disconnect();
-
-          const leetCode = new LeetCodeV2();
-          if (!!!v2SubmitBtn.onclick) {
-            textarea.addEventListener('keydown', e => v2SubmissionHandler(e, leetCode));
-            v2SubmitBtn.onclick = e => v2SubmissionHandler(e, leetCode);
+        const leetCode = new LeetCodeV1();
+        v1SubmitBtn.addEventListener('click', async () => {
+          const shouldSync = await showSyncConfirmationModal();
+          if (shouldSync) {
+            loader(leetCode);
           }
+        });
+        return;
+      }
+
+      if (v2SubmitBtn && textarea) {
+        observer.disconnect();
+
+        const leetCode = new LeetCodeV2();
+        if (!!!v2SubmitBtn.onclick) {
+          textarea.addEventListener('keydown', e => v2SubmissionHandler(e, leetCode));
+          v2SubmitBtn.onclick = e => v2SubmissionHandler(e, leetCode);
         }
-      })
+      }
+    })
     : null;
 
 
@@ -743,28 +759,8 @@ if (typeof document !== 'undefined' && document.body && submitBtnObserver) {
   });
 }
 
-/* Sync to local storage */
-api.storage.local.get('isSync', data => {
-  const keys = [
-    'leetsync_token',
-    'leetsync_username',
-    'stats',
-    'leetsync_hook',
-    'mode_type',
-  ];
-  if (!data || !data.isSync) {
-    keys.forEach(key => {
-      api.storage.sync.get(key, data => {
-        api.storage.local.set({ [key]: data[key] });
-      });
-    });
-    api.storage.local.set({ isSync: true }, () => {
-      console.log('LeetSync Synced to local values');
-    });
-  } else {
-    console.log('LeetSync Local storage already synced!');
-  }
-});
+/* Ensure extension storage initialization does not overwrite persistent local storage */
+api.storage.local.set({ isSync: true });
 
 setupManualSubmitBtn(
   debounce(

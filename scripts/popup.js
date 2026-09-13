@@ -73,7 +73,12 @@ api.storage.local.get('leetsync_token', data => {
         } else if (xhr.status === 401) {
           // bad oAuth
           // reset token and redirect to authorization process again!
-          api.storage.local.set({ leetsync_token: null }, () => {
+          api.storage.local.set({
+            leetsync_token: null,
+            leetsync_username: null,
+            mode_type: 'hook',
+            leetsync_hook: null,
+          }, () => {
             console.log('BAD oAuth!!! Redirecting back to oAuth process');
             action = true;
             $('#auth_mode').show();

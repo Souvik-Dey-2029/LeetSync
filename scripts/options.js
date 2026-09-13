@@ -48,9 +48,38 @@ async function loadConnectionState() {
     'leetsync_token',
     'leetsync_username',
   ]);
-  if (leetsync_token && leetsync_username) {
-    connectedUsernameEl.textContent = leetsync_username;
-    setView('connected');
+  if (leetsync_token) {
+    try {
+      const user = await fetchGitHubUser(leetsync_token);
+      const username = user?.login || leetsync_username;
+      if (username && username !== leetsync_username) {
+        await api.storage.local.set({ leetsync_username: username });
+      }
+      connectedUsernameEl.textContent = username;
+      setView('connected');
+    } catch (err) {
+      if (
+        err &&
+        (err.code === 'USER_FETCH_FAILED' ||
+          err.status === 401 ||
+          (err.message && err.message.includes('401')))
+      ) {
+        await api.storage.local.set({
+          leetsync_token: null,
+          leetsync_username: null,
+          mode_type: 'hook',
+          leetsync_hook: null,
+        });
+        setView('not_connected');
+      } else {
+        if (leetsync_username) {
+          connectedUsernameEl.textContent = leetsync_username;
+          setView('connected');
+        } else {
+          setView('not_connected');
+        }
+      }
+    }
   } else {
     setView('not_connected');
   }

@@ -694,6 +694,12 @@ async function v2SubmissionHandler(event, leetCode) {
     return;
   }
 
+  const { leetsync_session_active } = await api.storage.local.get('leetsync_session_active');
+  if (!leetsync_session_active) {
+    // LeetSync session is inactive: do not intercept or sync
+    return;
+  }
+
   const authenticated =
     !isEmptyObject(await api.storage.local.get(['leetsync_token'])) &&
     !isEmptyObject(await api.storage.local.get(['leetsync_hook']));
@@ -731,6 +737,10 @@ const submitBtnObserver =
 
         const leetCode = new LeetCodeV1();
         v1SubmitBtn.addEventListener('click', async () => {
+          const { leetsync_session_active } = await api.storage.local.get('leetsync_session_active');
+          if (!leetsync_session_active) {
+            return;
+          }
           const shouldSync = await showSyncConfirmationModal();
           if (shouldSync) {
             loader(leetCode);
@@ -764,10 +774,16 @@ api.storage.local.set({ isSync: true });
 
 setupManualSubmitBtn(
   debounce(
-    () => {
+    async () => {
+      const { leetsync_session_active } = await api.storage.local.get('leetsync_session_active');
+      if (!leetsync_session_active) {
+        return;
+      }
       const leetCode = new LeetCodeV2();
       // Manual submission event can only fire when we have submissionId. Simply retrieve it.
-      const submissionId = window.location.href.match(/leetcode\.com\/.*\/submissions\/(\d+)/)[1];
+      const match = window.location.href.match(/leetcode\.com\/.*\/submissions\/(\d+)/);
+      if (!match || !match[1]) return;
+      const submissionId = match[1];
       leetCode.submissionId = submissionId;
       loader(leetCode);
       return;

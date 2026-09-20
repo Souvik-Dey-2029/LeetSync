@@ -5,7 +5,7 @@ let api = isChrome() ? chrome : isFirefox() ? browser : undefined;
 api.runtime.onInstalled.addListener(details => {
   if (details.reason === 'install') {
     // Allow persistent stats to sync on repo link
-    api.storage.local.set({ sync_stats: true });
+    api.storage.local.set({ sync_stats: true, leetsync_session_active: false });
 
     // Send new installs straight to the settings page to configure their
     // own GitHub OAuth App and connect their account.
@@ -13,6 +13,14 @@ api.runtime.onInstalled.addListener(details => {
     api.tabs.create({ url: settingsUrl, active: true });
   }
 });
+
+if (api.runtime.onStartup) {
+  api.runtime.onStartup.addListener(() => {
+    // Session state is temporary: resets to inactive on browser restart
+    // Auth & repository states in storage remain untouched.
+    api.storage.local.set({ leetsync_session_active: false });
+  });
+}
 
 api.runtime.onMessage.addListener(handleMessage);
 

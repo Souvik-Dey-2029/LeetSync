@@ -158,6 +158,7 @@ disconnectBtn.addEventListener('click', async () => {
     leetsync_username: null,
     mode_type: 'hook',
     leetsync_hook: null,
+    leetsync_session_active: false,
   });
   setView('not_connected');
 });

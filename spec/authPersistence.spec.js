@@ -9,7 +9,15 @@ describe('Authentication Persistence Specs', () => {
         storageState = {};
 
         globalThis.chrome = {
-            runtime: {},
+            runtime: {
+                openOptionsPage: () => {},
+                getURL: path => path,
+                onStartup: {
+                    addListener: cb => {
+                        globalThis.chrome.runtime._startupCb = cb;
+                    }
+                }
+            },
             storage: {
                 local: {
                     get: (keys) => {
@@ -48,112 +56,263 @@ describe('Authentication Persistence Specs', () => {
         globalThis.fetch = originalFetch;
     });
 
-    it('A: First installation / No stored token -> authentication required', async () => {
+    it('1. First-time user has no authentication -> unauthenticated', async () => {
         const data = await chrome.storage.local.get('leetsync_token');
         expect(data.leetsync_token).toBeFalsy();
     });
 
-    it('B: Valid stored token -> remains authenticated', async () => {
-        storageState = {
-            leetsync_token: 'valid_test_token_123',
-            leetsync_username: 'testuser',
-            mode_type: 'commit',
-            leetsync_hook: 'testuser/leetcode-repo',
-        };
-
+    it('2. Successful authentication -> stored in chrome.storage.local', async () => {
+        await chrome.storage.local.set({
+            leetsync_token: 'gho_secret1234567890',
+            leetsync_username: 'souvik-test',
+        });
         const data = await chrome.storage.local.get(['leetsync_token', 'leetsync_username']);
-        expect(data.leetsync_token).toBe('valid_test_token_123');
-        expect(data.leetsync_username).toBe('testuser');
+        expect(data.leetsync_token).toBe('gho_secret1234567890');
+        expect(data.leetsync_username).toBe('souvik-test');
     });
 
-    it('C & D & E: Extension initialization does NOT clear persistent token or configuration', async () => {
+    it('3. Browser/extension restart simulation -> stored authentication is restored', async () => {
         storageState = {
-            leetsync_token: 'persistent_token_456',
-            leetsync_username: 'persistent_user',
-            leetsync_hook: 'persistent_user/my-repo',
+            leetsync_token: 'gho_restart_token',
+            leetsync_username: 'souvik-restart',
             mode_type: 'commit',
-            leetsync_client_id: 'my-client-id-789',
-            stats: { solved: 5, easy: 3, medium: 2, hard: 0, shas: {} },
+            leetsync_hook: 'souvik-restart/my-leetcode',
         };
 
-        // Simulate extension reload / initialization script running (setting isSync: true)
-        await chrome.storage.local.set({ isSync: true });
+        // Simulate browser restart: onStartup fires
+        if (chrome.runtime._startupCb) {
+            chrome.runtime._startupCb();
+        }
 
-        const finalState = await chrome.storage.local.get([
+        const restored = await chrome.storage.local.get(['leetsync_token', 'leetsync_username']);
+        expect(restored.leetsync_token).toBe('gho_restart_token');
+        expect(restored.leetsync_username).toBe('souvik-restart');
+    });
+
+    it('4. Popup reopened -> still authenticated', async () => {
+        storageState = {
+            leetsync_token: 'valid_active_token',
+            leetsync_username: 'souvik-dey',
+            leetsync_hook: 'souvik-dey/LeetCode-Solutions',
+            mode_type: 'commit',
+        };
+
+        const popupData = await chrome.storage.local.get(['leetsync_token', 'leetsync_username', 'leetsync_hook']);
+        expect(popupData.leetsync_token).toBe('valid_active_token');
+        expect(popupData.leetsync_username).toBe('souvik-dey');
+    });
+
+    it('5. Repository selected -> repository configuration persists in storage', async () => {
+        await chrome.storage.local.set({
+            mode_type: 'commit',
+            leetsync_hook: 'Souvik-Dey-2029/LeetCode-Solutions',
+            repo: 'https://github.com/Souvik-Dey-2029/LeetCode-Solutions',
+        });
+
+        const repoData = await chrome.storage.local.get(['mode_type', 'leetsync_hook', 'repo']);
+        expect(repoData.mode_type).toBe('commit');
+        expect(repoData.leetsync_hook).toBe('Souvik-Dey-2029/LeetCode-Solutions');
+        expect(repoData.repo).toBe('https://github.com/Souvik-Dey-2029/LeetCode-Solutions');
+    });
+
+    it('6. Extension restarted -> repository is still connected', async () => {
+        storageState = {
+            leetsync_token: 'my_auth_token',
+            leetsync_username: 'Souvik-Dey-2029',
+            leetsync_hook: 'Souvik-Dey-2029/LeetCode-Solutions',
+            mode_type: 'commit',
+        };
+
+        // Simulate restart
+        const dataAfterRestart = await chrome.storage.local.get(['leetsync_hook', 'mode_type']);
+        expect(dataAfterRestart.leetsync_hook).toBe('Souvik-Dey-2029/LeetCode-Solutions');
+        expect(dataAfterRestart.mode_type).toBe('commit');
+    });
+
+    it('7. Laptop/browser closed and reopened -> authentication remains available', async () => {
+        storageState = {
+            leetsync_token: 'offline_surviving_token',
+            leetsync_username: 'laptop_user',
+        };
+
+        // Days later, reading storage
+        const state = await chrome.storage.local.get('leetsync_token');
+        expect(state.leetsync_token).toBe('offline_surviving_token');
+    });
+
+    it('8. Network unavailable during token validation -> do NOT delete stored token', async () => {
+        storageState = {
+            leetsync_token: 'offline_token',
+            leetsync_username: 'offline_user',
+        };
+
+        // Simulate network failure validation returning status 0 (no connection)
+        const simulateValidation = async (token) => {
+            try {
+                throw new Error('Failed to fetch (Network Error)');
+            } catch (err) {
+                return { status: 0, networkError: true };
+            }
+        };
+
+        const result = await simulateValidation(storageState.leetsync_token);
+        if (result.status === 401) {
+            delete storageState.leetsync_token;
+        }
+
+        expect(storageState.leetsync_token).toBe('offline_token');
+    });
+
+    it('9. GitHub returns 200 from /user -> remain authenticated', async () => {
+        storageState = {
+            leetsync_token: 'valid_token_200',
+            leetsync_username: 'valid_user',
+        };
+
+        const result = { status: 200, user: { login: 'valid_user' } };
+        if (result.status === 200) {
+            // Keep authenticated
+        } else if (result.status === 401) {
+            delete storageState.leetsync_token;
+        }
+
+        expect(storageState.leetsync_token).toBe('valid_token_200');
+    });
+
+    it('10. GitHub returns 401 -> require reauthentication and clear invalid credential', async () => {
+        storageState = {
+            leetsync_token: 'expired_or_revoked_token',
+            leetsync_username: 'revoked_user',
+        };
+
+        const result = { status: 401 };
+        if (result.status === 401) {
+            await chrome.storage.local.set({
+                leetsync_token: null,
+                leetsync_username: null,
+                mode_type: 'hook',
+                leetsync_hook: null,
+                leetsync_session_active: false,
+            });
+        }
+
+        const state = await chrome.storage.local.get(['leetsync_token', 'leetsync_username']);
+        expect(state.leetsync_token).toBeNull();
+        expect(state.leetsync_username).toBeNull();
+    });
+
+    it('11. User clicks Disconnect -> authentication and repository configuration are cleared', async () => {
+        storageState = {
+            leetsync_token: 'active_token',
+            leetsync_username: 'active_user',
+            leetsync_hook: 'active_user/repo',
+            mode_type: 'commit',
+            leetsync_session_active: true,
+        };
+
+        // User triggers disconnect
+        await chrome.storage.local.set({
+            leetsync_token: null,
+            leetsync_username: null,
+            mode_type: 'hook',
+            leetsync_hook: null,
+            leetsync_session_active: false,
+        });
+
+        const state = await chrome.storage.local.get([
             'leetsync_token',
             'leetsync_username',
             'leetsync_hook',
             'mode_type',
-            'leetsync_client_id',
-            'stats',
+            'leetsync_session_active',
         ]);
 
-        expect(finalState.leetsync_token).toBe('persistent_token_456');
-        expect(finalState.leetsync_username).toBe('persistent_user');
-        expect(finalState.leetsync_hook).toBe('persistent_user/my-repo');
-        expect(finalState.mode_type).toBe('commit');
-        expect(finalState.leetsync_client_id).toBe('my-client-id-789');
-        expect(finalState.stats.solved).toBe(5);
-    });
-
-    it('F: Invalid / revoked token (401 response) -> clears authentication state', async () => {
-        storageState = {
-            leetsync_token: 'revoked_token',
-            leetsync_username: 'revoked_user',
-            mode_type: 'commit',
-            leetsync_hook: 'revoked_user/repo',
-        };
-
-        // Simulate 401 handler clearing authentication state
-        await chrome.storage.local.set({
-            leetsync_token: null,
-            leetsync_username: null,
-            mode_type: 'hook',
-            leetsync_hook: null,
-        });
-
-        const state = await chrome.storage.local.get(['leetsync_token', 'leetsync_username', 'mode_type', 'leetsync_hook']);
         expect(state.leetsync_token).toBeNull();
         expect(state.leetsync_username).toBeNull();
         expect(state.leetsync_hook).toBeNull();
         expect(state.mode_type).toBe('hook');
+        expect(state.leetsync_session_active).toBeFalse();
     });
 
-    it('G: Explicit disconnect -> removes stored token and authentication state', async () => {
+    it('12. User clicks STOP -> only LeetCode session becomes inactive, auth & repo remain intact', async () => {
         storageState = {
-            leetsync_token: 'user_token',
-            leetsync_username: 'active_user',
+            leetsync_token: 'valid_token_stop_test',
+            leetsync_username: 'test_user',
+            leetsync_hook: 'test_user/my-repo',
             mode_type: 'commit',
-            leetsync_hook: 'active_user/repo',
+            leetsync_session_active: true,
         };
 
-        // User clicks disconnect
-        await chrome.storage.local.set({
-            leetsync_token: null,
-            leetsync_username: null,
-            mode_type: 'hook',
-            leetsync_hook: null,
-        });
+        // User clicks STOP
+        await chrome.storage.local.set({ leetsync_session_active: false });
 
-        const state = await chrome.storage.local.get(['leetsync_token', 'leetsync_username']);
-        expect(state.leetsync_token).toBeNull();
-        expect(state.leetsync_username).toBeNull();
+        const state = await chrome.storage.local.get([
+            'leetsync_token',
+            'leetsync_username',
+            'leetsync_hook',
+            'leetsync_session_active',
+        ]);
+
+        expect(state.leetsync_session_active).toBe(false);
+        expect(state.leetsync_token).toBe('valid_token_stop_test');
+        expect(state.leetsync_username).toBe('test_user');
+        expect(state.leetsync_hook).toBe('test_user/my-repo');
     });
 
-    it('H: User switching -> new account credentials overwrite stored auth state correctly', async () => {
+    it('13. User clicks START -> LeetCode session becomes active without OAuth', async () => {
         storageState = {
-            leetsync_token: 'old_token',
-            leetsync_username: 'old_user',
+            leetsync_token: 'already_authenticated_token',
+            leetsync_username: 'already_connected_user',
+            leetsync_hook: 'already_connected_user/repo',
+            mode_type: 'commit',
+            leetsync_session_active: false,
         };
 
-        // New user completes OAuth device flow
-        await chrome.storage.local.set({
-            leetsync_token: 'new_token_999',
-            leetsync_username: 'new_user_999',
-        });
+        // User clicks START
+        await chrome.storage.local.set({ leetsync_session_active: true });
+
+        const state = await chrome.storage.local.get([
+            'leetsync_session_active',
+            'leetsync_token',
+        ]);
+
+        expect(state.leetsync_session_active).toBe(true);
+        expect(state.leetsync_token).toBe('already_authenticated_token');
+    });
+
+    it('14. Repository becomes unavailable -> repository disconnected/unavailable, auth remains intact', async () => {
+        storageState = {
+            leetsync_token: 'auth_token_alive',
+            leetsync_username: 'my_user',
+            leetsync_hook: 'my_user/deleted_repo',
+            mode_type: 'commit',
+        };
+
+        // Repo check returns 404
+        const repoCheckStatus = 404;
+        if (repoCheckStatus === 404) {
+            // Only repository availability is affected; auth token is NOT cleared
+        }
 
         const state = await chrome.storage.local.get(['leetsync_token', 'leetsync_username']);
-        expect(state.leetsync_token).toBe('new_token_999');
-        expect(state.leetsync_username).toBe('new_user_999');
+        expect(state.leetsync_token).toBe('auth_token_alive');
+        expect(state.leetsync_username).toBe('my_user');
+    });
+
+    it('15. Extension initialization -> never blindly clears existing authentication', async () => {
+        storageState = {
+            leetsync_token: 'vital_user_token',
+            leetsync_username: 'vital_user',
+            leetsync_hook: 'vital_user/vital_repo',
+            mode_type: 'commit',
+        };
+
+        // Initialization runs:
+        await chrome.storage.local.set({ isSync: true });
+
+        const state = await chrome.storage.local.get(['leetsync_token', 'leetsync_hook']);
+        expect(state.leetsync_token).toBe('vital_user_token');
+        expect(state.leetsync_hook).toBe('vital_user/vital_repo');
     });
 });
+

@@ -18,7 +18,7 @@
         <h1 id="title">LeetSync</h1>
         <p id="caption">Sync your code from LeetCode to GitHub</p>
         <br />
-        <!-- Authentication mode -->
+        <!-- Authentication mode (State 1) -->
         <div id="auth_mode" hidden>
           <p class="onboarding">
             <br />
@@ -27,26 +27,74 @@
           </p>
           <button id="authenticate" class="ui secondary button">
             <i class="icon github"></i>
-            Authenticate
+            Connect GitHub
           </button>
         </div>
 
-        <!-- Repo Hook mode -->
+        <!-- Invalid Authentication mode (State 5) -->
+        <div id="auth_invalid_mode" hidden>
+          <div class="status-box error-box">
+            <p><strong>GitHub:</strong> <span class="status-warning">⚠ Authentication expired or revoked</span></p>
+          </div>
+          <button id="reauthenticate_btn" class="ui negative button">
+            <i class="icon key"></i>
+            Re-authenticate
+          </button>
+        </div>
+
+        <!-- Repo Hook mode (State 2) -->
         <div id="hook_mode" hidden>
+          <div class="status-box">
+            <p><strong>GitHub:</strong> <span class="status-success">● Connected</span> (<span id="hook_username"></span>)</p>
+            <p><strong>Repository:</strong> <span class="status-muted">Not connected</span></p>
+          </div>
           <p class="onboarding">
-            <br />
             Set up repository hook to use
             <strong>Leet<span style="color: #ff6c0a">Sync</span></strong>
           </p>
-          <a id="hook_URL" href="" target="blank" class="ui secondary button">
+          <a id="hook_URL" href="" target="_blank" class="ui secondary button">
             <i class="icon github"></i>
-            Set up Hook
+            Connect Repository
           </a>
         </div>
 
-        <!-- Commit mode -->
+        <!-- Repo Unavailable mode (State 6) -->
+        <div id="repo_unavailable_mode" hidden>
+          <div class="status-box">
+            <p><strong>GitHub:</strong> <span class="status-success">● Connected</span> (<span id="unavail_username"></span>)</p>
+            <p><strong>Repository:</strong> <span class="status-warning">⚠ Repository unavailable</span></p>
+          </div>
+          <p class="onboarding">The previously selected repository cannot be accessed.</p>
+          <a id="reselect_repo_btn" href="" target="_blank" class="ui primary button">
+            <i class="icon folder open"></i>
+            Select Repository
+          </a>
+        </div>
+
+        <!-- Commit / Ready / Active mode (States 3 & 4) -->
         <div id="commit_mode" hidden>
-          <p id="repo_url" class="ui small header"></p>
+          <div class="status-box">
+            <div class="status-row">
+              <span class="status-label">GitHub:</span>
+              <span class="status-val status-success">● Connected (<span id="user_display"></span>)</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Repository:</span>
+              <span id="repo_url" class="status-val"></span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">LeetSync:</span>
+              <span id="session_status_indicator" class="status-val status-ready">○ Ready</span>
+            </div>
+          </div>
+
+          <!-- Session Controls -->
+          <div id="session_controls" style="margin: 12px 0;">
+            <button id="session_toggle_btn" class="ui positive button" style="min-width: 140px; font-size: 1.1em; font-weight: bold;">
+              <i class="icon play"></i> START
+            </button>
+          </div>
+
           <p class="onboarding">Problems Solved: <span id="p_solved">0</span></p>
           <p class="ui small header">
             <span style="color: #5cb85c">Easy:</span>
@@ -56,28 +104,26 @@
             <span style="color: #d9534f">&ensp; &ensp; Hard:</span>
             <span id="p_solved_hard" style="color: #000000; opacity: 0.75">0 </span>
           </p>
-          <button id="reset_stats" type="button">Reset all stats</button>
-          <div id="reset_confirmation" style="position:absolute; display:none; top:200px; left:50%; width:500px; margin-left:-250px; border:1px solid blue; padding:20px; background-color:white;">
+          <button id="reset_stats" type="button" class="ui mini basic button">Reset all stats</button>
+          <div id="reset_confirmation" style="position:absolute; display:none; top:120px; left:50%; width:280px; margin-left:-140px; border:1px solid #999; border-radius: 6px; padding:15px; background-color:white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;">
             <p>Are you sure you want to delete your stats?</p>
             <p>
-                <button id="reset_yes" type="button">
-                    Yes
-                </button>
-                <button id="reset_no" type="button">
-                    No
-                </button>
+                <button id="reset_yes" type="button" class="ui mini red button">Yes</button>
+                <button id="reset_no" type="button" class="ui mini button">No</button>
             </p>
           </div>
-
         </div>
       </div>
 
-      <!-- Links -->
-      <div id="socials" class="sixteen wide column">
-        <a id="settings_URL" href="" target="_blank" aria-label="Settings" title="GitHub authentication settings"
-          ><i class="ui grey settings icon"></i
-        ></a>
-        <a id="welcome_URL" href="" target="_blank" aria-label="Homepage"><i class="ui grey globe icon"></i></a>
+      <!-- Links & Disconnect -->
+      <div id="socials" class="sixteen wide column" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 8px;">
+        <div style="text-align: left;">
+          <a id="disconnect_link" href="#" style="font-size: 0.85em; color: #a94442; display: none;" title="Disconnect GitHub account">Disconnect</a>
+        </div>
+        <div style="text-align: right;">
+          <a id="settings_URL" href="" target="_blank" aria-label="Settings" title="GitHub authentication settings"><i class="ui grey settings icon"></i></a>
+          <a id="welcome_URL" href="" target="_blank" aria-label="Homepage"><i class="ui grey globe icon"></i></a>
+        </div>
       </div>
     </div>
 

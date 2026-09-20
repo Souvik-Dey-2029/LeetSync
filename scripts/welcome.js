@@ -191,12 +191,26 @@ const linkRepo = (token, name) => {
       return;
     }
     if (xhr.status !== 200) {
+      // If network failure / offline (status === 0), do NOT wipe existing repo configuration!
+      if (xhr.status === 0) {
+        console.warn(`Network unavailable while validating repository ${name}. Retaining existing configuration.`);
+        $('#error').text('Network offline or GitHub unreachable. Using cached repository connection.');
+        $('#error').show();
+        updateHeaderStatus(true, name);
+        document.getElementById('hook_mode').style.display = 'none';
+        document.getElementById('commit_mode').style.display = 'block';
+        return;
+      }
+
       handleLinkRepoError(xhr.status, name);
-      api.storage.local.set({ mode_type: 'hook', leetsync_hook: null }, () => {
-        console.log(`Error linking ${name} to LeetSync`);
-        console.log('Defaulted repo hook to NONE');
-        updateHeaderStatus(false);
-      });
+      // Only clear if confirmed not found or forbidden
+      if (xhr.status === 404 || xhr.status === 403 || xhr.status === 401) {
+        api.storage.local.set({ mode_type: 'hook', leetsync_hook: null }, () => {
+          console.log(`Error linking ${name} to LeetSync`);
+          console.log('Defaulted repo hook to NONE');
+          updateHeaderStatus(false);
+        });
+      }
 
       document.getElementById('hook_mode').style.display = 'block';
       document.getElementById('commit_mode').style.display = 'none';

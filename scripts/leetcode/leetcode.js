@@ -23,6 +23,7 @@ import {
 } from './util.js';
 import { showSyncConfirmationModal, showExistingProblemModal } from './modal.js';
 import { appendProblemToReadme, sortTopicsInReadme } from './readmeTopics.js';
+import { getValidGitHubToken, githubFetch } from '../githubDeviceAuth.js';
 
 /* Commit messages */
 const readmeMsg = 'Create README - LeetSync';
@@ -78,21 +79,19 @@ async function upload(token, hook, content, problem, filename, sha, message) {
 
   let options = {
     method: 'PUT',
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-    },
     body: JSON.stringify(data),
   };
 
-  const res = await fetch(URL, options);
+  const res = await githubFetch(api, URL, options);
   if (!res.ok) {
     if (res.status === 401) {
       await api.storage.local.set({
         leetsync_token: null,
+        leetsync_refresh_token: null,
+        leetsync_token_expires_at: null,
+        leetsync_refresh_token_expires_at: null,
         leetsync_username: null,
-        mode_type: 'hook',
-        leetsync_hook: null,
+        leetsync_session_active: false,
       });
     }
     throw new LeetSyncError(res.status, { cause: res });
@@ -423,22 +422,16 @@ async function getGitHubFile(token, hook, directory, filename) {
   const path = getPath(directory, filename);
   const URL = `https://api.github.com/repos/${hook}/contents/${path}`;
 
-  let options = {
-    method: 'GET',
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-    },
-  };
-
-  const res = await fetch(URL, options);
+  const res = await githubFetch(api, URL);
   if (!res.ok) {
     if (res.status === 401) {
       await api.storage.local.set({
         leetsync_token: null,
+        leetsync_refresh_token: null,
+        leetsync_token_expires_at: null,
+        leetsync_refresh_token_expires_at: null,
         leetsync_username: null,
-        mode_type: 'hook',
-        leetsync_hook: null,
+        leetsync_session_active: false,
       });
     }
     throw new Error(res.status);

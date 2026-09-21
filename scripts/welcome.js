@@ -1,4 +1,5 @@
 import { getBrowser } from './leetcode/util.js';
+import { getValidGitHubToken, githubFetch } from './githubDeviceAuth.js';
 
 const api = getBrowser();
 
@@ -70,8 +71,7 @@ const createRepoDescription =
 
 /* Sync's local storage with persistent stats and returns the pulled stats. */
 const syncStats = async () => {
-  let { leetsync_hook, leetsync_token, sync_stats, stats } = await api.storage.local.get([
-    'leetsync_token',
+  let { leetsync_hook, sync_stats, stats } = await api.storage.local.get([
     'leetsync_hook',
     'sync_stats',
     'stats',
@@ -84,29 +84,26 @@ const syncStats = async () => {
 
   const URL = `https://api.github.com/repos/${leetsync_hook}/contents/stats.json`;
 
-  let options = {
-    method: 'GET',
-    headers: {
-      Authorization: `token ${leetsync_token}`,
-      Accept: 'application/vnd.github.v3+json',
-    },
-  };
+  try {
+    let resp = await githubFetch(api, URL);
+    if (!resp.ok && resp.status == 404) {
+      await api.storage.local.set({ sync_stats: false });
+      console.log('No stats found; starting fresh');
+      return {};
+    }
+    let data = await resp.json();
+    let pStatsJson = decodeURIComponent(escape(atob(data.content)));
+    let pStats = await JSON.parse(pStatsJson);
 
-  let resp = await fetch(URL, options);
-  if (!resp.ok && resp.status == 404) {
-    await api.storage.local.set({ sync_stats: false });
-    console.log('No stats found; starting fresh');
+    api.storage.local.set({ stats: pStats.leetcode, sync_stats: false }, () =>
+      console.log(`Successfully synced local stats with GitHub stats`)
+    );
+
+    return { stats: pStats.leetcode };
+  } catch (e) {
+    console.warn('Could not sync stats with GitHub:', e);
     return {};
   }
-  let data = await resp.json();
-  let pStatsJson = decodeURIComponent(escape(atob(data.content)));
-  let pStats = await JSON.parse(pStatsJson);
-
-  api.storage.local.set({ stats: pStats.leetcode, sync_stats: false }, () =>
-    console.log(`Successfully synced local stats with GitHub stats`)
-  );
-
-  return { stats: pStats.leetcode };
 };
 
 const getCreateErrorString = (statusCode, name) => {
@@ -137,14 +134,18 @@ const createRepo = async (token, name) => {
 
   const options = {
     method: 'POST',
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-    },
     body: JSON.stringify(data),
   };
 
-  let res = await fetch(AUTHENTICATION_URL, options);
+  let res;
+  try {
+    res = await githubFetch(api, AUTHENTICATION_URL, options);
+  } catch (err) {
+    $('#error').text('Network offline or error creating repository. Try again later.');
+    $('#error').show();
+    return;
+  }
+
   if (!res.ok) {
     return handleRepoCreateError(res.status, name);
   }
@@ -182,29 +183,15 @@ const handleLinkRepoError = (statusCode, name) => {
   $('#unlink').show();
 };
 
-const linkRepo = (token, name) => {
+const linkRepo = async (token, name) => {
   const AUTHENTICATION_URL = `https://api.github.com/repos/${name}`;
 
-  const xhr = new XMLHttpRequest();
-  xhr.addEventListener('readystatechange', function () {
-    if (xhr.readyState !== 4) {
-      return;
-    }
-    if (xhr.status !== 200) {
-      // If network failure / offline (status === 0), do NOT wipe existing repo configuration!
-      if (xhr.status === 0) {
-        console.warn(`Network unavailable while validating repository ${name}. Retaining existing configuration.`);
-        $('#error').text('Network offline or GitHub unreachable. Using cached repository connection.');
-        $('#error').show();
-        updateHeaderStatus(true, name);
-        document.getElementById('hook_mode').style.display = 'none';
-        document.getElementById('commit_mode').style.display = 'block';
-        return;
-      }
-
-      handleLinkRepoError(xhr.status, name);
+  try {
+    const res = await githubFetch(api, AUTHENTICATION_URL);
+    if (!res.ok) {
+      handleLinkRepoError(res.status, name);
       // Only clear if confirmed not found or forbidden
-      if (xhr.status === 404 || xhr.status === 403 || xhr.status === 401) {
+      if (res.status === 404 || res.status === 403 || res.status === 401) {
         api.storage.local.set({ mode_type: 'hook', leetsync_hook: null }, () => {
           console.log(`Error linking ${name} to LeetSync`);
           console.log('Defaulted repo hook to NONE');
@@ -217,17 +204,17 @@ const linkRepo = (token, name) => {
       return;
     }
 
-    const res = JSON.parse(xhr.responseText);
+    const data = await res.json();
     api.storage.local.set(
-      { mode_type: 'commit', repo: res.html_url, leetsync_hook: res.full_name },
+      { mode_type: 'commit', repo: data.html_url, leetsync_hook: data.full_name },
       () => {
         $('#error').hide();
         $('#success').html(
-          `Successfully linked <a target="_blank" href="${res.html_url}">${name}</a> to LeetSync. Start <a href="https://leetcode.com" target="_blank">LeetCoding</a> now!`
+          `Successfully linked <a target="_blank" href="${data.html_url}">${name}</a> to LeetSync. Start <a href="https://leetcode.com" target="_blank">LeetCoding</a> now!`
         );
         $('#success').show();
         $('#unlink').show();
-        updateHeaderStatus(true, res.full_name, res.html_url);
+        updateHeaderStatus(true, data.full_name, data.html_url);
         console.log('Successfully set new repo hook');
       }
     );
@@ -235,9 +222,9 @@ const linkRepo = (token, name) => {
     /* Get Persistent Stats or Create new stats */
     api.storage.local
       .get('sync_stats')
-      .then(data => (data?.sync_stats ? syncStats() : api.storage.local.get('stats')))
-      .then(data => {
-        const stats = data?.stats;
+      .then(data2 => (data2?.sync_stats ? syncStats() : api.storage.local.get('stats')))
+      .then(data2 => {
+        const stats = data2?.stats;
         $('#p_solved').text(stats?.solved ?? 0);
         $('#p_solved_easy').text(stats?.easy ?? 0);
         $('#p_solved_medium').text(stats?.medium ?? 0);
@@ -246,12 +233,14 @@ const linkRepo = (token, name) => {
 
     document.getElementById('hook_mode').style.display = 'none';
     document.getElementById('commit_mode').style.display = 'block';
-  });
-
-  xhr.open('GET', AUTHENTICATION_URL, true);
-  xhr.setRequestHeader('Authorization', `token ${token}`);
-  xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
-  xhr.send();
+  } catch (err) {
+    console.warn(`Network unavailable while validating repository ${name}. Retaining existing configuration.`);
+    $('#error').text('Network offline or GitHub unreachable. Using cached repository connection.');
+    $('#error').show();
+    updateHeaderStatus(true, name);
+    document.getElementById('hook_mode').style.display = 'none';
+    document.getElementById('commit_mode').style.display = 'block';
+  }
 };
 
 const unlinkRepo = () => {

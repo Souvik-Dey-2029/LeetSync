@@ -1,4 +1,5 @@
 import { getBrowser } from "./leetcode/util.js";
+import { getValidGitHubToken, githubFetch } from "./githubDeviceAuth.js";
 
 const api = getBrowser();
 
@@ -41,6 +42,9 @@ $('#disconnect_link').on('click', async e => {
   if (confirm('Are you sure you want to disconnect your GitHub account and repository?')) {
     await api.storage.local.set({
       leetsync_token: null,
+      leetsync_refresh_token: null,
+      leetsync_token_expires_at: null,
+      leetsync_refresh_token_expires_at: null,
       leetsync_username: null,
       mode_type: 'hook',
       leetsync_hook: null,
@@ -144,12 +148,7 @@ function showState(state, data = {}) {
 
 async function validateGitHubToken(token) {
   try {
-    const res = await fetch('https://api.github.com/user', {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
-    });
+    const res = await githubFetch(api, 'https://api.github.com/user');
 
     if (res.status === 200) {
       const user = await res.json();
@@ -167,12 +166,7 @@ async function validateGitHubToken(token) {
 
 async function validateRepository(token, hook) {
   try {
-    const res = await fetch(`https://api.github.com/repos/${hook}`, {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
-    });
+    const res = await githubFetch(api, `https://api.github.com/repos/${hook}`);
 
     if (res.status === 200) {
       return { status: 200 };
@@ -210,16 +204,17 @@ async function initPopup() {
     return;
   }
 
-  // Validate GitHub Token safely
+  // Validate GitHub Token safely (getValidGitHubToken will auto-refresh if near expiry)
   const authValidation = await validateGitHubToken(token);
 
   if (authValidation.status === 401) {
-    // Confirmed invalid / revoked token: clear credential
+    // Confirmed invalid / revoked token: clear credentials, but PRESERVE leetsync_hook!
     await api.storage.local.set({
       leetsync_token: null,
+      leetsync_refresh_token: null,
+      leetsync_token_expires_at: null,
+      leetsync_refresh_token_expires_at: null,
       leetsync_username: null,
-      mode_type: 'hook',
-      leetsync_hook: null,
       leetsync_session_active: false,
     });
     showState(5);

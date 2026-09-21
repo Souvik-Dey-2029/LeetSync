@@ -1,5 +1,11 @@
 import { getBrowser } from './leetcode/util.js';
-import { requestDeviceCode, pollForAccessToken, fetchGitHubUser } from './githubDeviceAuth.js';
+import {
+  requestDeviceCode,
+  pollForAccessToken,
+  fetchGitHubUser,
+  saveTokenPair,
+  getValidGitHubToken,
+} from './githubDeviceAuth.js';
 
 const api = getBrowser();
 
@@ -44,13 +50,12 @@ async function loadClientId() {
 }
 
 async function loadConnectionState() {
-  const { leetsync_token, leetsync_username } = await api.storage.local.get([
-    'leetsync_token',
-    'leetsync_username',
-  ]);
-  if (leetsync_token) {
+  const auth = await getValidGitHubToken(api);
+  const { leetsync_username } = await api.storage.local.get('leetsync_username');
+
+  if (auth.token) {
     try {
-      const user = await fetchGitHubUser(leetsync_token);
+      const user = await fetchGitHubUser(auth.token);
       const username = user?.login || leetsync_username;
       if (username && username !== leetsync_username) {
         await api.storage.local.set({ leetsync_username: username });
@@ -64,14 +69,28 @@ async function loadConnectionState() {
           err.status === 401 ||
           (err.message && err.message.includes('401')))
       ) {
+        // Try refresh once
+        const refreshed = await getValidGitHubToken(api, true);
+        if (refreshed.token) {
+          try {
+            const user = await fetchGitHubUser(refreshed.token);
+            connectedUsernameEl.textContent = user?.login || leetsync_username;
+            setView('connected');
+            return;
+          } catch (e) {}
+        }
+        // Genuinely failed auth: do NOT wipe repository hook!
         await api.storage.local.set({
           leetsync_token: null,
+          leetsync_refresh_token: null,
+          leetsync_token_expires_at: null,
+          leetsync_refresh_token_expires_at: null,
           leetsync_username: null,
-          mode_type: 'hook',
-          leetsync_hook: null,
+          leetsync_session_active: false,
         });
         setView('not_connected');
       } else {
+        // Network or other error: keep connected view with cached username
         if (leetsync_username) {
           connectedUsernameEl.textContent = leetsync_username;
           setView('connected');
@@ -133,10 +152,7 @@ connectBtn.addEventListener('click', async () => {
 
     const user = await fetchGitHubUser(tokenData.access_token);
 
-    await api.storage.local.set({
-      leetsync_token: tokenData.access_token,
-      leetsync_username: user.login,
-    });
+    await saveTokenPair(api, tokenData, user.login);
 
     connectedUsernameEl.textContent = user.login;
     setView('connected');
@@ -155,6 +171,9 @@ cancelBtn.addEventListener('click', () => {
 disconnectBtn.addEventListener('click', async () => {
   await api.storage.local.set({
     leetsync_token: null,
+    leetsync_refresh_token: null,
+    leetsync_token_expires_at: null,
+    leetsync_refresh_token_expires_at: null,
     leetsync_username: null,
     mode_type: 'hook',
     leetsync_hook: null,
